@@ -1,0 +1,55 @@
+name: Test Environment Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RUN TEST to confirm the credential check"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-environment-smoke
+  cancel-in-progress: false
+
+jobs:
+  reject-unauthorized-request:
+    name: Reject non-main or unconfirmed request
+    if: ${{ github.ref != 'refs/heads/main' || inputs.confirmation != 'RUN TEST' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Reject request before environment access
+        run: |
+          echo "::error::Run this workflow from main and enter the exact confirmation RUN TEST."
+          exit 1
+
+  validate-credentials:
+    name: Validate OpenRouter and Hugging Face access
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirmation == 'RUN TEST' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: Test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate protected service credentials and benchmark access
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          OPENROUTER_BASE_URL: ${{ vars.OPENROUTER_BASE_URL }}
+          OPENROUTER_HTTP_REFERER: ${{ vars.OPENROUTER_HTTP_REFERER }}
+          OPENROUTER_APP_TITLE: ${{ vars.OPENROUTER_APP_TITLE }}
+          NOERELAY_LIVE_TESTS: ${{ vars.NOERELAY_LIVE_TESTS }}
+        run: python scripts/remote_service_smoke.py

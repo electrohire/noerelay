@@ -146,6 +146,9 @@ spec/
   schemas/                        JSON Schema 2020-12 domain contracts
 tests/
   test_spec.py                    Executable conformance tests
+.github/workflows/
+  conformance.yml                 Secret-free pull request and main-branch CI
+  test-environment-smoke.yml      Main-guarded, manual credential smoke check
 ```
 
 ## Quick start

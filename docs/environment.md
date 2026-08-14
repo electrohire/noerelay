@@ -28,7 +28,16 @@ In the private GitHub repository:
 | `OPENROUTER_APP_TITLE` | `NoeRelay` |
 | `NOERELAY_LIVE_TESTS` | `1` only in a budget-limited live-test job; omit or set `0` for ordinary tests |
 
-Offline conformance tests require no keys. A future live-test workflow should declare `environment: test`, use `secrets.OPENROUTER_API_KEY` and `secrets.HF_TOKEN`, and never print either value.
+Offline conformance tests require no keys. The remote smoke workflow declares `environment: Test`, uses `secrets.OPENROUTER_API_KEY` and `secrets.HF_TOKEN`, and never prints either value.
+
+The repository includes two GitHub Actions workflows:
+
+- `Conformance` runs secret-free schema and reference-kernel tests for pull requests, pushes to `main`, and manual dispatches.
+- `Test Environment Smoke` is manual-only, accepts only `main`, requires the exact confirmation `RUN TEST`, declares the credential-bearing `Test` environment only after those guards pass, validates both credentials, and confirms access to the initial Hugging Face benchmark repositories. It does not make a paid inference request.
+
+Environment names are case-sensitive in workflow configuration. The remote environment is named `Test`.
+
+The current GitHub billing plan does not support native required reviewers or deployment-branch policies for this private repository. GitHub rejected both rules through its environment API. Until the plan supports them, the manual-only trigger, pre-environment `main` guard, explicit confirmation, read-only workflow permissions, immutable action pins, and separation from pull-request CI are compensating controls. Native independent approval remains the preferred control before any paid generation or deployment job is enabled.
 
 ## Windows local environment
 
