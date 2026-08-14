@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/schemas/context-capsule.schema.json",
+  "title": "EPR Context Capsule",
+  "type": "object",
+  "required": [
+    "capsule_id",
+    "task_id",
+    "generated_at",
+    "source_ledger_head_hash",
+    "active_requirement_ids",
+    "approved_decision_ids",
+    "unresolved_claim_ids",
+    "failed_mandatory_check_ids",
+    "evidence_handles",
+    "artifact_hashes",
+    "narrative",
+    "invariants"
+  ],
+  "properties": {
+    "capsule_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "task_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "generated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "source_ledger_head_hash": {"$ref": "common.schema.json#/$defs/sha256"},
+    "active_requirement_ids": {"$ref": "#/$defs/id_set"},
+    "approved_decision_ids": {"$ref": "#/$defs/id_set"},
+    "unresolved_claim_ids": {"$ref": "#/$defs/id_set"},
+    "failed_mandatory_check_ids": {"$ref": "#/$defs/id_set"},
+    "evidence_handles": {"$ref": "#/$defs/id_set"},
+    "artifact_hashes": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/sha256"},
+      "uniqueItems": true
+    },
+    "narrative": {"type": "string"},
+    "excluded_event_count": {"type": "integer", "minimum": 0},
+    "invariants": {
+      "type": "object",
+      "required": ["authoritative_state_preserved", "evidence_dereferenceable", "summary_is_not_evidence"],
+      "properties": {
+        "authoritative_state_preserved": {"const": true},
+        "evidence_dereferenceable": {"const": true},
+        "summary_is_not_evidence": {"const": true}
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "id_set": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/identifier"},
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false
+}

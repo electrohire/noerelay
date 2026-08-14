@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/schemas/candidate-action.schema.json",
+  "title": "EPR Candidate Action",
+  "type": "object",
+  "required": [
+    "candidate_id",
+    "action_kind",
+    "provider_family",
+    "roles",
+    "available",
+    "capabilities",
+    "data_policies",
+    "acceptance",
+    "latency_ms_p95",
+    "costs"
+  ],
+  "properties": {
+    "candidate_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "action_kind": {"enum": ["model", "tool", "retrieval", "clarification", "human", "abstain"]},
+    "provider_family": {"type": "string", "minLength": 1},
+    "roles": {
+      "type": "array",
+      "items": {"enum": ["execute", "verify", "clarify", "retrieve"]},
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "available": {"type": "boolean"},
+    "capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "data_policies": {
+      "type": "array",
+      "items": {"enum": ["standard", "no_training", "zdr", "local_only"]},
+      "uniqueItems": true
+    },
+    "acceptance": {"$ref": "common.schema.json#/$defs/calibrated_probability"},
+    "latency_ms_p95": {"type": "integer", "minimum": 0},
+    "costs": {
+      "type": "object",
+      "required": [
+        "call_cost_usd",
+        "tool_cost_usd",
+        "verification_cost_usd",
+        "expected_retry_cost_usd",
+        "expected_fallback_cost_usd",
+        "infrastructure_cost_usd",
+        "expected_human_review_cost_usd"
+      ],
+      "properties": {
+        "call_cost_usd": {"type": "number", "minimum": 0},
+        "tool_cost_usd": {"type": "number", "minimum": 0},
+        "verification_cost_usd": {"type": "number", "minimum": 0},
+        "expected_retry_cost_usd": {"type": "number", "minimum": 0},
+        "expected_fallback_cost_usd": {"type": "number", "minimum": 0},
+        "infrastructure_cost_usd": {"type": "number", "minimum": 0},
+        "expected_human_review_cost_usd": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,71 @@
+{
+  "policy_id": "epr-default-routing-policy",
+  "version": "1.0.0",
+  "fail_closed": true,
+  "risk_acceptance_lcb": {
+    "low": 0.85,
+    "medium": 0.95,
+    "high": 0.99,
+    "critical": 0.995
+  },
+  "independent_verification_required_for": ["high", "critical"],
+  "human_approval_required_for": ["critical"],
+  "missing_acceptance_behavior": {
+    "low": "clarify_or_apply_documented_default",
+    "medium": "clarification_required",
+    "high": "clarification_required",
+    "critical": "rejected_until_specified"
+  },
+  "hard_constraint_order": [
+    "availability",
+    "required_capabilities",
+    "data_policy",
+    "provider_allow_deny",
+    "acceptance_lcb",
+    "independent_verification",
+    "human_approval",
+    "max_cost_usd",
+    "max_latency_ms"
+  ],
+  "optimization_order": [
+    "expected_total_cost_usd_asc",
+    "latency_ms_p95_asc",
+    "acceptance_lcb_desc"
+  ],
+  "expected_total_cost_fields": [
+    "call_cost_usd",
+    "tool_cost_usd",
+    "verification_cost_usd",
+    "expected_retry_cost_usd",
+    "expected_fallback_cost_usd",
+    "infrastructure_cost_usd",
+    "expected_human_review_cost_usd"
+  ],
+  "verification": {
+    "low": ["schema", "policy"],
+    "medium": ["schema", "policy", "deterministic_acceptance"],
+    "high": ["schema", "policy", "deterministic_acceptance", "independent_family_review"],
+    "critical": ["schema", "policy", "deterministic_acceptance", "independent_family_review", "human_approval"]
+  },
+  "test_independence": {
+    "high_risk_allowed": ["independent", "hidden", "mutation", "formal", "human"],
+    "worker_generated_only_is_sufficient": false
+  },
+  "decoding_phases": {
+    "tool_action": "native_tool_calling_without_final_output_grammar",
+    "final_report": "schema_constrained_without_tool_choice"
+  },
+  "fallback_classes": {
+    "transport": "provider_fallback",
+    "capability": "capability_fallback",
+    "quality": "semantic_fallback",
+    "epistemic": "information_action_or_escalation",
+    "policy": "reject_or_authorize",
+    "specification": "targeted_clarification"
+  },
+  "online_learning": {
+    "production_self_modification": false,
+    "canary_only": true,
+    "promotion_requires_signed_benchmark": true
+  }
+}

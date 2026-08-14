@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/schemas/evidence-receipt.schema.json",
+  "title": "EPR Outcome Evidence Receipt",
+  "type": "object",
+  "required": [
+    "receipt_id",
+    "run_id",
+    "task_id",
+    "status",
+    "issued_at",
+    "policy_version",
+    "route_decision_id",
+    "verification_results",
+    "unresolved_claim_ids",
+    "total_cost",
+    "trace_id",
+    "ledger_head_hash"
+  ],
+  "properties": {
+    "receipt_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "run_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "task_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "status": {"enum": ["accepted", "escalated", "rejected"]},
+    "issued_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "policy_version": {"type": "string"},
+    "route_decision_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "artifact_hashes": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/sha256"},
+      "uniqueItems": true
+    },
+    "verification_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criterion_id", "status", "evidence_ids"],
+        "properties": {
+          "criterion_id": {"$ref": "common.schema.json#/$defs/identifier"},
+          "status": {"enum": ["passed", "failed", "not_run", "waived"]},
+          "evidence_ids": {
+            "type": "array",
+            "items": {"$ref": "common.schema.json#/$defs/identifier"},
+            "uniqueItems": true
+          },
+          "waiver_authority": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "unresolved_claim_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/identifier"},
+      "uniqueItems": true
+    },
+    "total_cost": {"$ref": "common.schema.json#/$defs/money"},
+    "trace_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "ledger_head_hash": {"$ref": "common.schema.json#/$defs/sha256"},
+    "signature": {"type": "string"}
+  },
+  "additionalProperties": false
+}

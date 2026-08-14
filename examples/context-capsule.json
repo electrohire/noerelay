@@ -1,0 +1,19 @@
+{
+  "capsule_id": "capsule-auth-fix-01",
+  "task_id": "task-auth-token-fix",
+  "generated_at": "2026-08-14T12:00:00Z",
+  "source_ledger_head_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "active_requirement_ids": ["req-auth-042"],
+  "approved_decision_ids": ["decision-auth-library"],
+  "unresolved_claim_ids": ["assumption-clock-source"],
+  "failed_mandatory_check_ids": ["check-expired-token"],
+  "evidence_handles": ["evidence-failing-test", "evidence-architecture-record"],
+  "artifact_hashes": ["sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+  "narrative": "Expired tokens are currently accepted. Preserve the approved authentication library and resolve the open clock-source assumption before acceptance.",
+  "excluded_event_count": 84,
+  "invariants": {
+    "authoritative_state_preserved": true,
+    "evidence_dereferenceable": true,
+    "summary_is_not_evidence": true
+  }
+}

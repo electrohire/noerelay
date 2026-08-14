@@ -1,0 +1,206 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NoeRelay EPR-1 OpenAI-Compatible Virtual Model API",
+    "version": "0.1.0",
+    "description": "A compatibility surface for an evidence-governed portfolio of models and tools. Standard fields are intentionally permissive; the epr governance extension is normative."
+  },
+  "servers": [{"url": "https://api.example.com"}],
+  "paths": {
+    "/v1/models": {
+      "get": {
+        "operationId": "listModels",
+        "responses": {
+          "200": {
+            "description": "Model list containing the virtual EPR model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["object", "data"],
+                  "properties": {
+                    "object": {"const": "list"},
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/model"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "operationId": "createChatCompletion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {"schema": {"$ref": "#/components/schemas/chatRequest"}}
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OpenAI-compatible completion with optional EPR metadata.",
+            "content": {
+              "application/json": {"schema": {"$ref": "#/components/schemas/chatResponse"}},
+              "text/event-stream": {"schema": {"type": "string"}}
+            }
+          },
+          "422": {"description": "Task contract or governance validation failed."},
+          "424": {"description": "No admissible route; escalation is required."}
+        }
+      }
+    },
+    "/v1/responses": {
+      "post": {
+        "operationId": "createResponse",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {"schema": {"$ref": "#/components/schemas/responseRequest"}}
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OpenAI-compatible response with optional EPR metadata.",
+            "content": {
+              "application/json": {"schema": {"$ref": "#/components/schemas/responseObject"}},
+              "text/event-stream": {"schema": {"type": "string"}}
+            }
+          },
+          "422": {"description": "Task contract or governance validation failed."},
+          "424": {"description": "No admissible route; escalation is required."}
+        }
+      }
+    },
+    "/v1/epr/runs/{run_id}": {
+      "get": {
+        "operationId": "getEvidenceReceipt",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evidence receipt for a completed or escalated run.",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "./schemas/evidence-receipt.schema.json"}
+              }
+            }
+          },
+          "404": {"description": "Run not found."}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "model": {
+      "type": "object",
+      "required": ["id", "object", "created", "owned_by"],
+      "properties": {
+        "id": {"const": "noerelay/epr-1"},
+        "object": {"const": "model"},
+        "created": {"type": "integer"},
+        "owned_by": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "governance": {
+      "type": "object",
+      "properties": {
+        "project_id": {"type": "string"},
+        "risk_class": {"enum": ["low", "medium", "high", "critical"]},
+        "max_cost_usd": {"type": "number", "exclusiveMinimum": 0},
+        "max_latency_ms": {"type": "integer", "exclusiveMinimum": 0},
+        "required_acceptance_probability": {"type": "number", "minimum": 0, "maximum": 1},
+        "data_policy": {"enum": ["standard", "no_training", "zdr", "local_only"]},
+        "retention_class": {"enum": ["ephemeral", "project", "regulated"]},
+        "return_evidence_receipt": {"type": "boolean", "default": true}
+      },
+      "additionalProperties": false
+    },
+    "chatRequest": {
+      "type": "object",
+      "required": ["model", "messages"],
+      "properties": {
+        "model": {"type": "string"},
+        "messages": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": true}},
+        "tools": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "tool_choice": {},
+        "response_format": {"type": "object", "additionalProperties": true},
+        "stream": {"type": "boolean"},
+        "temperature": {"type": "number"},
+        "max_tokens": {"type": "integer", "minimum": 1},
+        "governance": {"$ref": "#/components/schemas/governance"}
+      },
+      "additionalProperties": true
+    },
+    "chatResponse": {
+      "type": "object",
+      "required": ["id", "object", "created", "model", "choices"],
+      "properties": {
+        "id": {"type": "string"},
+        "object": {"const": "chat.completion"},
+        "created": {"type": "integer"},
+        "model": {"type": "string"},
+        "choices": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "usage": {"type": "object", "additionalProperties": true},
+        "epr": {"$ref": "#/components/schemas/eprMetadata"}
+      },
+      "additionalProperties": true
+    },
+    "responseRequest": {
+      "type": "object",
+      "required": ["model", "input"],
+      "properties": {
+        "model": {"type": "string"},
+        "input": {},
+        "instructions": {"type": "string"},
+        "tools": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "text": {"type": "object", "additionalProperties": true},
+        "stream": {"type": "boolean"},
+        "governance": {"$ref": "#/components/schemas/governance"}
+      },
+      "additionalProperties": true
+    },
+    "responseObject": {
+      "type": "object",
+      "required": ["id", "object", "model", "output"],
+      "properties": {
+        "id": {"type": "string"},
+        "object": {"const": "response"},
+        "model": {"type": "string"},
+        "output": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "usage": {"type": "object", "additionalProperties": true},
+        "epr": {"$ref": "#/components/schemas/eprMetadata"}
+      },
+      "additionalProperties": true
+    },
+    "eprMetadata": {
+      "type": "object",
+      "required": ["run_id", "trace_id", "status", "route_decision_id", "ledger_head_hash"],
+      "properties": {
+        "run_id": {"type": "string"},
+        "trace_id": {"type": "string"},
+        "status": {"enum": ["accepted", "escalated", "rejected"]},
+        "route_decision_id": {"type": "string"},
+        "evidence_receipt_url": {"type": "string", "format": "uri"},
+        "ledger_head_hash": {"type": "string"},
+        "total_cost_usd": {"type": "number", "minimum": 0},
+        "provider_fallback_count": {"type": "integer", "minimum": 0},
+        "semantic_fallback_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+      }
+    }
+  }
+}

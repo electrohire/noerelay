@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/schemas/common.schema.json",
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "money": {
+      "type": "object",
+      "required": ["currency", "amount"],
+      "properties": {
+        "currency": {"const": "USD"},
+        "amount": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {
+          "enum": ["human", "model", "tool", "service", "policy"]
+        },
+        "provider_family": {"type": "string"},
+        "version": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "calibrated_probability": {
+      "type": "object",
+      "required": ["estimate", "lower_bound", "calibration_set_id"],
+      "properties": {
+        "estimate": {"type": "number", "minimum": 0, "maximum": 1},
+        "lower_bound": {"type": "number", "minimum": 0, "maximum": 1},
+        "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1, "default": 0.95},
+        "calibration_set_id": {"$ref": "#/$defs/identifier"},
+        "calibrator_version": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "task_id": "task-auth-token-fix",
+  "project_id": "project-example",
+  "goal": "Fix expired-token acceptance and provide reproducible verification evidence.",
+  "task_kind": "coding",
+  "risk_class": "high",
+  "input_modalities": ["text"],
+  "required_capabilities": ["text", "tool_calling", "structured_output", "code_execution"],
+  "acceptance_criteria": [
+    {
+      "id": "ac-expired-token",
+      "description": "Expired authentication tokens are rejected.",
+      "kind": "executable",
+      "mandatory": true,
+      "evaluator_ref": "tests/security/test_expired_token.py",
+      "requirement_refs": ["req-auth-042"]
+    },
+    {
+      "id": "ac-regression",
+      "description": "The independent hidden authentication regression suite passes.",
+      "kind": "executable",
+      "mandatory": true,
+      "evaluator_ref": "hidden://auth-regression-v3",
+      "requirement_refs": ["req-auth-042"]
+    }
+  ],
+  "governance": {
+    "data_policy": "zdr",
+    "allowed_provider_families": ["qwen", "openai", "anthropic"],
+    "denied_provider_families": [],
+    "max_cost_usd": 1.0,
+    "max_latency_ms": 60000,
+    "required_acceptance_probability": 0.99,
+    "human_approval_required": false,
+    "retention_class": "project"
+  },
+  "trace_links": [
+    {"relation": "implements", "target_id": "req-auth-042"},
+    {"relation": "depends_on", "target_id": "arch-auth-008"}
+  ]
+}

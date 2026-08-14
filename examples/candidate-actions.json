@@ -1,0 +1,132 @@
+[
+  {
+    "candidate_id": "qwen3.6-35b-a3b-worker",
+    "action_kind": "model",
+    "provider_family": "qwen",
+    "roles": ["execute"],
+    "available": true,
+    "capabilities": ["text", "vision", "tool_calling", "structured_output", "code_execution"],
+    "data_policies": ["standard", "no_training", "zdr", "local_only"],
+    "acceptance": {
+      "estimate": 0.996,
+      "lower_bound": 0.992,
+      "confidence_level": 0.95,
+      "calibration_set_id": "cal-high-risk-code-v3",
+      "calibrator_version": "conformal-2"
+    },
+    "latency_ms_p95": 18000,
+    "costs": {
+      "call_cost_usd": 0.04,
+      "tool_cost_usd": 0.02,
+      "verification_cost_usd": 0,
+      "expected_retry_cost_usd": 0.01,
+      "expected_fallback_cost_usd": 0.01,
+      "infrastructure_cost_usd": 0.01,
+      "expected_human_review_cost_usd": 0
+    }
+  },
+  {
+    "candidate_id": "cheap-code-worker",
+    "action_kind": "model",
+    "provider_family": "other-open",
+    "roles": ["execute"],
+    "available": true,
+    "capabilities": ["text", "tool_calling", "structured_output", "code_execution"],
+    "data_policies": ["standard", "no_training", "zdr"],
+    "acceptance": {
+      "estimate": 0.989,
+      "lower_bound": 0.985,
+      "confidence_level": 0.95,
+      "calibration_set_id": "cal-high-risk-code-v3",
+      "calibrator_version": "conformal-2"
+    },
+    "latency_ms_p95": 9000,
+    "costs": {
+      "call_cost_usd": 0.01,
+      "tool_cost_usd": 0.01,
+      "verification_cost_usd": 0,
+      "expected_retry_cost_usd": 0.01,
+      "expected_fallback_cost_usd": 0.01,
+      "infrastructure_cost_usd": 0,
+      "expected_human_review_cost_usd": 0
+    }
+  },
+  {
+    "candidate_id": "frontier-code-worker",
+    "action_kind": "model",
+    "provider_family": "openai",
+    "roles": ["execute"],
+    "available": true,
+    "capabilities": ["text", "vision", "tool_calling", "structured_output", "code_execution"],
+    "data_policies": ["standard", "no_training", "zdr"],
+    "acceptance": {
+      "estimate": 0.999,
+      "lower_bound": 0.997,
+      "confidence_level": 0.95,
+      "calibration_set_id": "cal-high-risk-code-v3",
+      "calibrator_version": "conformal-2"
+    },
+    "latency_ms_p95": 22000,
+    "costs": {
+      "call_cost_usd": 0.45,
+      "tool_cost_usd": 0.03,
+      "verification_cost_usd": 0,
+      "expected_retry_cost_usd": 0.03,
+      "expected_fallback_cost_usd": 0.02,
+      "infrastructure_cost_usd": 0.01,
+      "expected_human_review_cost_usd": 0
+    }
+  },
+  {
+    "candidate_id": "qwen-reviewer",
+    "action_kind": "model",
+    "provider_family": "qwen",
+    "roles": ["verify"],
+    "available": true,
+    "capabilities": ["text", "structured_output"],
+    "data_policies": ["standard", "no_training", "zdr", "local_only"],
+    "acceptance": {
+      "estimate": 0.997,
+      "lower_bound": 0.993,
+      "confidence_level": 0.95,
+      "calibration_set_id": "cal-high-risk-review-v2",
+      "calibrator_version": "conformal-2"
+    },
+    "latency_ms_p95": 12000,
+    "costs": {
+      "call_cost_usd": 0.04,
+      "tool_cost_usd": 0,
+      "verification_cost_usd": 0.01,
+      "expected_retry_cost_usd": 0,
+      "expected_fallback_cost_usd": 0,
+      "infrastructure_cost_usd": 0.01,
+      "expected_human_review_cost_usd": 0
+    }
+  },
+  {
+    "candidate_id": "independent-reviewer",
+    "action_kind": "model",
+    "provider_family": "anthropic",
+    "roles": ["verify"],
+    "available": true,
+    "capabilities": ["text", "structured_output"],
+    "data_policies": ["standard", "no_training", "zdr"],
+    "acceptance": {
+      "estimate": 0.998,
+      "lower_bound": 0.995,
+      "confidence_level": 0.95,
+      "calibration_set_id": "cal-high-risk-review-v2",
+      "calibrator_version": "conformal-2"
+    },
+    "latency_ms_p95": 14000,
+    "costs": {
+      "call_cost_usd": 0.08,
+      "tool_cost_usd": 0,
+      "verification_cost_usd": 0.02,
+      "expected_retry_cost_usd": 0,
+      "expected_fallback_cost_usd": 0,
+      "infrastructure_cost_usd": 0.01,
+      "expected_human_review_cost_usd": 0
+    }
+  }
+]

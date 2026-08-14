@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/schemas/route-decision.schema.json",
+  "title": "EPR Route Decision",
+  "type": "object",
+  "required": ["decision_id", "task_id", "status", "policy_version", "required_acceptance_lcb", "candidate_audit"],
+  "properties": {
+    "decision_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "task_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "status": {"enum": ["route_selected", "clarification_required", "escalation_required", "rejected"]},
+    "policy_version": {"type": "string"},
+    "required_acceptance_lcb": {"type": "number", "minimum": 0, "maximum": 1},
+    "selected_plan": {"$ref": "#/$defs/plan"},
+    "fallback_plans": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/plan"}
+    },
+    "candidate_audit": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["candidate_id", "admissible", "reasons"],
+        "properties": {
+          "candidate_id": {"$ref": "common.schema.json#/$defs/identifier"},
+          "admissible": {"type": "boolean"},
+          "reasons": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "explanation": {"type": "string"}
+  },
+  "$defs": {
+    "plan": {
+      "type": "object",
+      "required": ["action_id", "action_kind", "provider_family", "expected_total_cost_usd", "acceptance_lcb", "latency_ms_p95"],
+      "properties": {
+        "action_id": {"$ref": "common.schema.json#/$defs/identifier"},
+        "action_kind": {"enum": ["model", "tool", "retrieval", "clarification", "human", "abstain"]},
+        "provider_family": {"type": "string"},
+        "verifier_id": {"$ref": "common.schema.json#/$defs/identifier"},
+        "verifier_family": {"type": "string"},
+        "expected_total_cost_usd": {"type": "number", "minimum": 0},
+        "acceptance_lcb": {"type": "number", "minimum": 0, "maximum": 1},
+        "latency_ms_p95": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "route_selected"}}, "required": ["status"]},
+      "then": {"required": ["selected_plan"]}
+    }
+  ],
+  "additionalProperties": false
+}

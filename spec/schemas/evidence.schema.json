@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/schemas/evidence.schema.json",
+  "title": "EPR Evidence Record",
+  "type": "object",
+  "required": [
+    "evidence_id",
+    "kind",
+    "produced_at",
+    "producer",
+    "activity_id",
+    "content_hash",
+    "location",
+    "strength"
+  ],
+  "properties": {
+    "evidence_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "kind": {
+      "enum": [
+        "direct_observation",
+        "tool_result",
+        "test_result",
+        "formal_proof",
+        "source_document",
+        "human_attestation",
+        "model_assertion",
+        "derived"
+      ]
+    },
+    "produced_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "producer": {"$ref": "common.schema.json#/$defs/actor"},
+    "activity_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "content_hash": {"$ref": "common.schema.json#/$defs/sha256"},
+    "artifact_hash": {"$ref": "common.schema.json#/$defs/sha256"},
+    "environment_hash": {"$ref": "common.schema.json#/$defs/sha256"},
+    "location": {"type": "string", "minLength": 1},
+    "strength": {"$ref": "common.schema.json#/$defs/calibrated_probability"},
+    "premise_evidence_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/identifier"},
+      "uniqueItems": true,
+      "default": []
+    },
+    "test_metadata": {
+      "type": "object",
+      "properties": {
+        "test_suite_id": {"type": "string"},
+        "test_version": {"type": "string"},
+        "exit_code": {"type": "integer"},
+        "independence": {"enum": ["worker_generated", "independent", "hidden", "mutation", "formal", "human"]},
+        "coverage": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
+    "prov": {
+      "type": "object",
+      "description": "Optional W3C PROV-compatible identifiers.",
+      "properties": {
+        "entity": {"type": "string"},
+        "activity": {"type": "string"},
+        "agent": {"type": "string"},
+        "was_derived_from": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"kind": {"enum": ["test_result", "formal_proof"]}}, "required": ["kind"]},
+      "then": {"required": ["artifact_hash", "environment_hash", "test_metadata"]}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "derived"}}, "required": ["kind"]},
+      "then": {"properties": {"premise_evidence_ids": {"minItems": 1}}}
+    }
+  ],
+  "additionalProperties": false
+}

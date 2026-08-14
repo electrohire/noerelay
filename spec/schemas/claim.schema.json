@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/schemas/claim.schema.json",
+  "title": "EPR Typed Claim",
+  "type": "object",
+  "required": ["claim_id", "kind", "statement", "state", "created_at", "created_by"],
+  "properties": {
+    "claim_id": {"$ref": "common.schema.json#/$defs/identifier"},
+    "kind": {
+      "enum": ["fact", "requirement", "decision", "assumption", "observation", "prediction", "preference", "artifact"]
+    },
+    "statement": {"type": "string", "minLength": 1},
+    "state": {"type": "string"},
+    "scope": {"type": "string"},
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "created_by": {"$ref": "common.schema.json#/$defs/actor"},
+    "support_evidence_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/identifier"},
+      "uniqueItems": true,
+      "default": []
+    },
+    "refutation_evidence_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/identifier"},
+      "uniqueItems": true,
+      "default": []
+    },
+    "premise_claim_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/identifier"},
+      "uniqueItems": true,
+      "default": []
+    },
+    "confidence": {"$ref": "common.schema.json#/$defs/calibrated_probability"},
+    "artifact_hash": {"$ref": "common.schema.json#/$defs/sha256"},
+    "valid_from": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "valid_until": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "supersedes": {"$ref": "common.schema.json#/$defs/identifier"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"kind": {"const": "fact"}}, "required": ["kind"]},
+      "then": {"properties": {"state": {"enum": ["unknown", "supported", "refuted", "conflicted"]}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "requirement"}}, "required": ["kind"]},
+      "then": {"properties": {"state": {"enum": ["draft", "active", "ambiguous", "superseded", "rejected"]}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "decision"}}, "required": ["kind"]},
+      "then": {"properties": {"state": {"enum": ["proposed", "approved", "revoked"]}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "assumption"}}, "required": ["kind"]},
+      "then": {"properties": {"state": {"enum": ["open", "validated", "invalidated"]}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "observation"}}, "required": ["kind"]},
+      "then": {"properties": {"state": {"enum": ["valid", "stale", "invalid", "irreproducible"]}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "prediction"}}, "required": ["kind"]},
+      "then": {
+        "properties": {"state": {"enum": ["uncalibrated", "calibrated", "expired"]}},
+        "required": ["confidence"]
+      }
+    },
+    {
+      "if": {"properties": {"kind": {"const": "preference"}}, "required": ["kind"]},
+      "then": {"properties": {"state": {"enum": ["active", "superseded"]}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "artifact"}}, "required": ["kind"]},
+      "then": {"properties": {"state": {"enum": ["proposed", "built", "tested", "released", "rejected"]}}}
+    }
+  ],
+  "additionalProperties": false
+}

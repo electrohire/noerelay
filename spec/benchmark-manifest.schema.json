@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electrohire.example/epr/benchmark-manifest.schema.json",
+  "title": "EPR Benchmark Manifest",
+  "type": "object",
+  "required": ["manifest_id", "version", "policy_version", "candidates", "cohorts", "global_promotion_gates"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "manifest_id": {"type": "string"},
+    "version": {"type": "string"},
+    "policy_version": {"type": "string"},
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "component", "version"],
+        "properties": {
+          "id": {"type": "string"},
+          "component": {"enum": ["shell", "ranker", "calibrator", "compactor", "worker", "verifier", "tool", "policy"]},
+          "version": {"type": "string"},
+          "provider_family": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "cohorts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "risk_class", "minimum_cases", "capabilities", "datasets", "promotion_gates"],
+        "properties": {
+          "id": {"type": "string"},
+          "risk_class": {"enum": ["low", "medium", "high", "critical"]},
+          "minimum_cases": {"type": "integer", "minimum": 1},
+          "capabilities": {"type": "array", "items": {"type": "string"}},
+          "datasets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "source", "split"],
+              "properties": {
+                "name": {"type": "string"},
+                "source": {"type": "string"},
+                "split": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "promotion_gates": {"$ref": "#/$defs/gates"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "global_promotion_gates": {"$ref": "#/$defs/gates"},
+    "reporting": {
+      "type": "object",
+      "properties": {
+        "confidence_interval": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "required_breakdowns": {"type": "array", "items": {"type": "string"}},
+        "retain_raw_traces": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "gates": {
+      "type": "object",
+      "properties": {
+        "minimum_accepted_outcome_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "maximum_unsafe_accept_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "maximum_selective_risk": {"type": "number", "minimum": 0, "maximum": 1},
+        "maximum_calibration_ece": {"type": "number", "minimum": 0, "maximum": 1},
+        "maximum_brier_score": {"type": "number", "minimum": 0, "maximum": 1},
+        "minimum_tool_call_success_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "minimum_context_evidence_recall": {"type": "number", "minimum": 0, "maximum": 1},
+        "minimum_requirement_trace_coverage": {"type": "number", "minimum": 0, "maximum": 1},
+        "minimum_replay_success_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "maximum_route_regret_usd": {"type": "number", "minimum": 0},
+        "maximum_p95_latency_ms": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
