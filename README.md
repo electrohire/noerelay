@@ -10,6 +10,8 @@ The generative layer proposes. Deterministic policy, evidence, provenance, and v
 
 > **Project status:** `0.1.0-draft` executable specification and dependency-free Python reference kernel. This repository defines the contracts a production gateway must preserve; it is not yet a production inference service.
 
+> **Production implementation decision:** The NoeRelay control plane will be Go-first. Python remains a first-class SDK, executable-specification, evaluation, and research-worker boundary; TypeScript serves the console/client layer; Rust is reserved for measured, narrowly scoped hardened components. Agent delegation uses governed A2A v1 adapters, tools/data use MCP, and user-facing run events use AG-UI.
+
 ## What “NoeRelay” means
 
 **Noe** is derived from *noetic*: relating to knowledge, reasoning, and the conditions under which something can be known. **Relay** describes how the system delegates work to the most appropriate model or technology, carries evidence between stages, and invokes explicit fallbacks when a route cannot meet its acceptance contract.
@@ -220,6 +222,8 @@ Only L3 may be lossy. Context is compiled by graph reachability from the active 
 ## Research basis
 
 [docs/research-basis.md](docs/research-basis.md) records the current primary research, standards, and preprints supporting portfolio routing, calibration, verification, provenance, agent evaluation, and context management. Research results are evidence for design choices, not production guarantees; relevant claims must be reproduced against NoeRelay's own task and risk cohorts.
+
+The implementation sequence, v1 completion definition, launch gates, and future deep-analysis/adaptation hooks are specified in [docs/product-completion-plan.md](docs/product-completion-plan.md).
 
 ## Security and responsible disclosure
 
