@@ -3,6 +3,14 @@
   "manifest_id": "epr-v1-promotion",
   "version": "0.1.0",
   "policy_version": "1.0.0",
+  "acquisition": {
+    "default_registry": "huggingface",
+    "token_env": "HF_TOKEN",
+    "cache_env": "HF_HOME",
+    "evaluation_runner": "lighteval",
+    "require_immutable_revision": true,
+    "allow_remote_code": false
+  },
   "candidates": [
     {"id": "qwen3.6-35b-a3b-epr-lora", "component": "shell", "version": "candidate-1", "provider_family": "qwen"},
     {"id": "epr-lightgbm-router", "component": "ranker", "version": "candidate-1"},
@@ -33,7 +41,7 @@
       "minimum_cases": 1000,
       "capabilities": ["tool_calling", "structured_output", "semantic_fallback"],
       "datasets": [
-        {"name": "BFCL v4", "source": "https://gorilla.cs.berkeley.edu/leaderboard.html", "split": "held-out"},
+        {"name": "BFCL v4", "source": "https://huggingface.co/datasets/gorilla-llm/Berkeley-Function-Calling-Leaderboard", "split": "held-out", "registry": "huggingface", "dataset_id": "gorilla-llm/Berkeley-Function-Calling-Leaderboard", "official_harness_required": true},
         {"name": "EPR Constraint-Tax Matrix", "source": "internal://benchmarks/tool-schema-matrix", "split": "hidden"}
       ],
       "promotion_gates": {
@@ -65,7 +73,7 @@
       "minimum_cases": 300,
       "capabilities": ["requirements", "architecture", "coding", "verification", "traceability"],
       "datasets": [
-        {"name": "SWE-bench Verified", "source": "https://www.swebench.com/", "split": "held-out"},
+        {"name": "SWE-bench Verified", "source": "https://huggingface.co/datasets/SWE-bench/SWE-bench_Verified", "split": "test", "registry": "huggingface", "dataset_id": "SWE-bench/SWE-bench_Verified", "official_harness_required": true},
         {"name": "EPR V-Model Trace Suite", "source": "internal://benchmarks/v-model", "split": "hidden"},
         {"name": "EPR Mutation and Test-Gaming Suite", "source": "internal://benchmarks/test-adequacy", "split": "hidden"}
       ],

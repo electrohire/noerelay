@@ -40,4 +40,5 @@ logs/
 tmp/
 temp/
 artifacts/
+.cache/
 *.log

@@ -2,9 +2,11 @@
 
 **Evidence-governed AI orchestration that routes by capability, verifies by policy, and optimizes for the lowest acceptable total cost.**
 
-NoeRelay is a virtual, OpenAI-compatible model backed by the **Epistemic Portfolio Runtime (EPR-1)**. Clients interact with one stable model endpoint while NoeRelay can delegate individual steps to different language models, deterministic tools, retrievers, image processors, image generators, formal solvers, or human reviewers.
+NoeRelay is a virtual model with an OpenAI-compatible client wire protocol, backed by the **Epistemic Portfolio Runtime (EPR-1)**. Model inference is routed through OpenRouter to explicit non-OpenAI model IDs. Clients interact with one stable model endpoint while NoeRelay can delegate individual steps to different language models, deterministic tools, retrievers, image processors, image generators, formal solvers, or human reviewers.
 
 The generative layer proposes. Deterministic policy, evidence, provenance, and verification layers decide what may execute and what may be released.
+
+> **Provider boundary:** Protocol compatibility is not provider usage. NoeRelay does not use OpenAI-hosted models, rejects the `openai` family and `openai/` model namespace, and disables automatic model selection that could bypass the evaluated portfolio.
 
 > **Project status:** `0.1.0-draft` executable specification and dependency-free Python reference kernel. This repository defines the contracts a production gateway must preserve; it is not yet a production inference service.
 
@@ -36,12 +38,12 @@ NoeRelay turns that portfolio into one governed model surface:
 
 ```mermaid
 flowchart LR
-    C["OpenAI / OpenRouter-compatible client"] --> A["Protocol adapter"]
+    C["OpenAI-wire-compatible client"] --> A["NoeRelay protocol adapter"]
     A --> T["Task-contract compiler"]
     T --> P["Deterministic policy gates"]
     P --> R["Portfolio router"]
 
-    R --> M["Language and vision models"]
+    R --> M["Explicit non-OpenAI models via OpenRouter"]
     R --> D["Deterministic tools and solvers"]
     R --> X["Retrieval and data systems"]
     R --> I["Image processing and generation"]
@@ -97,6 +99,8 @@ The draft [OpenAPI 3.1 specification](spec/openapi.json) defines the intended pu
 
 Standard request fields pass through. An optional `governance` object can specify project identity, risk class, cost and latency ceilings, required acceptance probability, data policy, retention class, and evidence-receipt behavior.
 
+OpenAI compatibility in this section describes request and response shapes only. The backend model gateway is OpenRouter, and deterministic policy blocks OpenAI model families, namespaces, and upstream endpoints. No `OPENAI_API_KEY` is used.
+
 Example request against a future conforming gateway:
 
 ```bash
@@ -124,6 +128,8 @@ curl "$NOERELAY_BASE_URL/v1/responses" \
 ```text
 docs/
   architecture.md                 Normative architecture and invariants
+  benchmarking.md                 Hugging Face acquisition and evaluation policy
+  environment.md                  Local and GitHub test credentials
   research-basis.md               Research and standards basis
 examples/
   candidate-actions.json          Candidate portfolio actions
@@ -171,6 +177,10 @@ python reference/demo.py
 
 The example demonstrates deterministic selection of the least-cost admissible worker plus an independent provider-family verifier. Cheaper candidates below the acceptance floor are retained in the audit as rejected rather than selected.
 
+### Configure live inference and benchmarks
+
+Offline conformance tests require no API keys. Live model tests use `OPENROUTER_API_KEY`; Hugging Face benchmark acquisition uses `HF_TOKEN` when authentication is needed. Do not commit either value and do not configure `OPENAI_API_KEY`. See [docs/environment.md](docs/environment.md) and [docs/benchmarking.md](docs/benchmarking.md).
+
 ## What the tests cover
 
 - Parsing every JSON artifact in the repository.
@@ -182,6 +192,7 @@ The example demonstrates deterministic selection of the least-cost admissible wo
 - Clarification when high-risk acceptance criteria are missing.
 - Detection of hash-ledger tampering.
 - Preservation of authoritative state during context compaction.
+- Rejection of OpenAI model families and `openai/` model IDs even if a task attempts to allow them.
 
 ## Routing and fallback semantics
 
@@ -217,7 +228,7 @@ Changes to normative behavior require corresponding schemas, examples, tests, an
 
 ## Roadmap
 
-- Build the production OpenAI/OpenRouter-compatible gateway.
+- Build the production OpenAI-wire-compatible gateway backed exclusively by explicit non-OpenAI models through OpenRouter.
 - Add provider and capability registries for text, vision, image generation, tools, retrieval, and local execution.
 - Implement durable W3C PROV-compatible storage and in-toto-aligned artifact attestations.
 - Add an evaluation harness for cost, latency, acceptance probability, calibration, and cohort regressions.

@@ -27,8 +27,8 @@
   ],
   "governance": {
     "data_policy": "zdr",
-    "allowed_provider_families": ["qwen", "openai", "anthropic"],
-    "denied_provider_families": [],
+    "allowed_provider_families": ["qwen", "anthropic"],
+    "denied_provider_families": ["openai"],
     "max_cost_usd": 1.0,
     "max_latency_ms": 60000,
     "required_acceptance_probability": 0.99,

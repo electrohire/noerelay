@@ -29,6 +29,9 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are normative.
 - **EPR-API-003:** Governance metadata MUST be optional. A deterministic default policy MUST apply when it is absent.
 - **EPR-API-004:** Streaming MUST preserve route identity and final evidence-receipt discoverability.
 - **EPR-API-005:** Image understanding and image generation MUST be represented as separate capabilities. A vision-language model MUST NOT be assumed to generate images.
+- **EPR-API-006:** OpenAI compatibility refers only to the client wire protocol and MUST NOT imply use of OpenAI-hosted models.
+- **EPR-API-007:** Production model inference MUST use OpenRouter with explicit model IDs. The `openai` model family, the `openai/` model namespace, OpenAI upstream endpoints, and automatic model selection MUST be denied by deterministic policy.
+- **EPR-API-008:** Model-level semantic fallback MUST be selected by NoeRelay from an evaluated portfolio. OpenRouter MAY perform endpoint fallback for the same explicit model only within the configured provider constraints.
 
 ### Contract compilation
 

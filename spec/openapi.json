@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "NoeRelay EPR-1 OpenAI-Compatible Virtual Model API",
+    "title": "NoeRelay EPR-1 OpenAI-Wire-Compatible Virtual Model API",
     "version": "0.1.0",
     "description": "A compatibility surface for an evidence-governed portfolio of models and tools. Standard fields are intentionally permissive; the epr governance extension is normative."
   },

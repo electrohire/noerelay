@@ -19,6 +19,8 @@
     "candidate_id": {"$ref": "common.schema.json#/$defs/identifier"},
     "action_kind": {"enum": ["model", "tool", "retrieval", "clarification", "human", "abstain"]},
     "provider_family": {"type": "string", "minLength": 1},
+    "inference_gateway": {"enum": ["openrouter", "local"]},
+    "model_id": {"type": "string", "minLength": 1},
     "roles": {
       "type": "array",
       "items": {"enum": ["execute", "verify", "clarify", "retrieve"]},
@@ -57,5 +59,14 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"action_kind": {"const": "model"}},
+        "required": ["action_kind"]
+      },
+      "then": {"required": ["inference_gateway", "model_id"]}
+    }
+  ],
   "additionalProperties": false
 }

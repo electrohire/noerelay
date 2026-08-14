@@ -25,10 +25,47 @@ def _missing_acceptance(contract: dict[str, Any]) -> bool:
     )
 
 
+def _inference_policy_reasons(
+    candidate: dict[str, Any],
+    policy: dict[str, Any],
+) -> list[str]:
+    """Apply gateway and model-identity constraints independently of task input."""
+
+    if candidate.get("action_kind") != "model":
+        return []
+
+    reasons: list[str] = []
+    inference = policy.get("inference", {})
+    gateway = str(candidate.get("inference_gateway", "")).lower()
+    model_id = str(candidate.get("model_id", "")).lower()
+    family = str(candidate.get("provider_family", "")).lower()
+
+    allowed_gateways = {str(item).lower() for item in inference.get("allowed_gateways", [])}
+    if allowed_gateways and gateway not in allowed_gateways:
+        reasons.append("inference_gateway_not_allowed")
+    if inference.get("explicit_model_id_required", False) and not model_id:
+        reasons.append("model_id_required")
+
+    forbidden_families = {
+        str(item).lower() for item in inference.get("forbidden_model_families", [])
+    }
+    if family in forbidden_families:
+        reasons.append("model_family_denied")
+
+    forbidden_ids = {str(item).lower() for item in inference.get("forbidden_model_ids", [])}
+    forbidden_prefixes = tuple(
+        str(item).lower() for item in inference.get("forbidden_model_prefixes", [])
+    )
+    if model_id in forbidden_ids or (model_id and model_id.startswith(forbidden_prefixes)):
+        reasons.append("model_id_denied")
+    return reasons
+
+
 def _base_reasons(
     contract: dict[str, Any],
     candidate: dict[str, Any],
     required_lcb: float,
+    policy: dict[str, Any],
 ) -> list[str]:
     reasons: list[str] = []
     governance = contract["governance"]
@@ -36,6 +73,7 @@ def _base_reasons(
     candidate_caps = set(candidate.get("capabilities", []))
     family = candidate.get("provider_family")
 
+    reasons.extend(_inference_policy_reasons(candidate, policy))
     if not candidate.get("available", False):
         reasons.append("unavailable")
     missing_caps = sorted(required_caps - candidate_caps)
@@ -62,9 +100,11 @@ def _verifier_reasons(
     worker: dict[str, Any],
     verifier: dict[str, Any],
     required_lcb: float,
+    policy: dict[str, Any],
 ) -> list[str]:
     reasons: list[str] = []
     governance = contract["governance"]
+    reasons.extend(_inference_policy_reasons(verifier, policy))
     if "verify" not in verifier.get("roles", []):
         reasons.append("not_a_verifier")
     if not verifier.get("available", False):
@@ -123,7 +163,7 @@ def select_route(
     plans: list[dict[str, Any]] = []
 
     for worker in workers:
-        reasons = _base_reasons(contract, worker, required_lcb)
+        reasons = _base_reasons(contract, worker, required_lcb, policy)
         audit = {
             "candidate_id": worker["candidate_id"],
             "admissible": False,
@@ -139,7 +179,7 @@ def select_route(
             verifier_options = [
                 verifier
                 for verifier in verifiers
-                if not _verifier_reasons(contract, worker, verifier, required_lcb)
+                if not _verifier_reasons(contract, worker, verifier, required_lcb, policy)
             ]
             if not verifier_options:
                 audit["reasons"].append("no_admissible_independent_verifier")
@@ -165,6 +205,8 @@ def select_route(
                 "action_id": worker["candidate_id"],
                 "action_kind": worker["action_kind"],
                 "provider_family": worker["provider_family"],
+                "inference_gateway": worker.get("inference_gateway"),
+                "model_id": worker.get("model_id"),
                 "expected_total_cost_usd": round(total_cost, 8),
                 "acceptance_lcb": plan_lcb,
                 "latency_ms_p95": latency,
@@ -172,6 +214,8 @@ def select_route(
             if verifier is not None:
                 plan["verifier_id"] = verifier["candidate_id"]
                 plan["verifier_family"] = verifier["provider_family"]
+                plan["verifier_gateway"] = verifier.get("inference_gateway")
+                plan["verifier_model_id"] = verifier.get("model_id")
             plans.append(plan)
             worker_had_plan = True
 

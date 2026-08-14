@@ -2,6 +2,8 @@
   {
     "candidate_id": "qwen3.6-35b-a3b-worker",
     "action_kind": "model",
+    "inference_gateway": "openrouter",
+    "model_id": "qwen/qwen3.6-35b-a3b",
     "provider_family": "qwen",
     "roles": ["execute"],
     "available": true,
@@ -28,7 +30,9 @@
   {
     "candidate_id": "cheap-code-worker",
     "action_kind": "model",
-    "provider_family": "other-open",
+    "inference_gateway": "openrouter",
+    "model_id": "qwen/qwen3.6-27b",
+    "provider_family": "qwen",
     "roles": ["execute"],
     "available": true,
     "capabilities": ["text", "tool_calling", "structured_output", "code_execution"],
@@ -54,7 +58,9 @@
   {
     "candidate_id": "frontier-code-worker",
     "action_kind": "model",
-    "provider_family": "openai",
+    "inference_gateway": "openrouter",
+    "model_id": "anthropic/claude-sonnet-4.6",
+    "provider_family": "anthropic",
     "roles": ["execute"],
     "available": true,
     "capabilities": ["text", "vision", "tool_calling", "structured_output", "code_execution"],
@@ -80,6 +86,8 @@
   {
     "candidate_id": "qwen-reviewer",
     "action_kind": "model",
+    "inference_gateway": "openrouter",
+    "model_id": "qwen/qwen3.6-35b-a3b",
     "provider_family": "qwen",
     "roles": ["verify"],
     "available": true,
@@ -106,6 +114,8 @@
   {
     "candidate_id": "independent-reviewer",
     "action_kind": "model",
+    "inference_gateway": "openrouter",
+    "model_id": "anthropic/claude-haiku-4.5",
     "provider_family": "anthropic",
     "roles": ["verify"],
     "available": true,

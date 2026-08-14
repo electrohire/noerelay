@@ -94,6 +94,8 @@ class RoutingTests(unittest.TestCase):
         decision = select_route(self.contract, self.candidates, self.policy)
         self.assertEqual(decision["status"], "route_selected")
         self.assertEqual(decision["selected_plan"]["action_id"], "qwen3.6-35b-a3b-worker")
+        self.assertEqual(decision["selected_plan"]["inference_gateway"], "openrouter")
+        self.assertEqual(decision["selected_plan"]["model_id"], "qwen/qwen3.6-35b-a3b")
         self.assertEqual(decision["selected_plan"]["verifier_family"], "anthropic")
         self.assertNotEqual(
             decision["selected_plan"]["provider_family"],
@@ -117,6 +119,39 @@ class RoutingTests(unittest.TestCase):
         contract["acceptance_criteria"][0]["kind"] = "missing"
         decision = select_route(contract, self.candidates, self.policy)
         self.assertEqual(decision["status"], "clarification_required")
+
+    def test_global_policy_blocks_openai_family_even_if_task_allows_it(self):
+        contract = deepcopy(self.contract)
+        contract["governance"]["allowed_provider_families"].append("openai")
+        contract["governance"]["denied_provider_families"] = []
+        candidates = deepcopy(self.candidates)
+        candidates[0]["provider_family"] = "openai"
+        candidates[0]["model_id"] = "non-openai-namespace/disguised-model"
+        decision = select_route(contract, candidates, self.policy)
+        audit = {item["candidate_id"]: item for item in decision["candidate_audit"]}
+        self.assertIn("model_family_denied", audit["qwen3.6-35b-a3b-worker"]["reasons"])
+
+    def test_global_policy_blocks_openai_model_namespace(self):
+        candidates = deepcopy(self.candidates)
+        candidates[0]["model_id"] = "openai/forbidden-model"
+        decision = select_route(self.contract, candidates, self.policy)
+        audit = {item["candidate_id"]: item for item in decision["candidate_audit"]}
+        self.assertIn("model_id_denied", audit["qwen3.6-35b-a3b-worker"]["reasons"])
+
+    def test_all_example_models_use_explicit_openrouter_ids(self):
+        for candidate in self.candidates:
+            if candidate["action_kind"] == "model":
+                self.assertEqual(candidate["inference_gateway"], "openrouter")
+                self.assertNotEqual(candidate["model_id"], "openrouter/auto")
+                self.assertFalse(candidate["model_id"].lower().startswith("openai/"))
+
+    def test_openrouter_cannot_auto_select_or_use_openai_upstream(self):
+        inference = self.policy["inference"]
+        openrouter = inference["openrouter"]
+        self.assertEqual(inference["allowed_gateways"], ["openrouter"])
+        self.assertFalse(openrouter["automatic_model_selection_allowed"])
+        self.assertIn("openai", openrouter["provider_routing"]["ignore"])
+        self.assertTrue(openrouter["image_generation"]["explicit_model_id_required"])
 
 
 class LedgerTests(unittest.TestCase):

@@ -2,6 +2,31 @@
   "policy_id": "epr-default-routing-policy",
   "version": "1.0.0",
   "fail_closed": true,
+  "inference": {
+    "default_gateway": "openrouter",
+    "allowed_gateways": ["openrouter"],
+    "explicit_model_id_required": true,
+    "forbidden_model_families": ["openai"],
+    "forbidden_model_prefixes": ["openai/"],
+    "forbidden_model_ids": ["openrouter/auto"],
+    "openrouter": {
+      "base_url_env": "OPENROUTER_BASE_URL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "model_fallbacks_managed_by_noerelay": true,
+      "automatic_model_selection_allowed": false,
+      "provider_routing": {
+        "allow_fallbacks": true,
+        "require_parameters": true,
+        "data_collection": "deny",
+        "zdr": true,
+        "ignore": ["openai"]
+      },
+      "image_generation": {
+        "explicit_model_id_required": true,
+        "forbidden_model_prefixes": ["openai/"]
+      }
+    }
+  },
   "risk_acceptance_lcb": {
     "low": 0.85,
     "medium": 0.95,
@@ -20,6 +45,8 @@
     "availability",
     "required_capabilities",
     "data_policy",
+    "inference_gateway",
+    "model_identity",
     "provider_allow_deny",
     "acceptance_lcb",
     "independent_verification",
