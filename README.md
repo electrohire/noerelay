@@ -225,6 +225,8 @@ Only L3 may be lossy. Context is compiled by graph reachability from the active 
 
 The implementation sequence, v1 completion definition, launch gates, and future deep-analysis/adaptation hooks are specified in [docs/product-completion-plan.md](docs/product-completion-plan.md).
 
+To resume this work on another machine or with another coding agent, start with [docs/continuation-handoff.md](docs/continuation-handoff.md). It records the current branch/PR, locked decisions, environment-variable names, governance constraints, verification commands, and the next implementation sequence.
+
 ## Security and responsible disclosure
 
 This ElectroHire repository is publicly visible. Do not place production credentials, customer data, proprietary model prompts, regulated evidence, or other non-public material in examples, commits, issues, or test fixtures. Report suspected vulnerabilities privately to the repository maintainers; see [SECURITY.md](SECURITY.md).
