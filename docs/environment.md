@@ -13,11 +13,11 @@ Do not create or configure `OPENAI_API_KEY`. NoeRelay does not use it. An OpenRo
 
 Use different OpenRouter and Hugging Face tokens for local development and CI. Give the CI OpenRouter key an expiration and a small spending limit. Give the CI Hugging Face token read-only access to only the benchmark repositories it needs.
 
-## GitHub `test` environment
+## GitHub `Test` environment
 
-In the private GitHub repository:
+In the GitHub repository:
 
-1. Open **Settings → Environments → New environment** and create `test`.
+1. Open **Settings → Environments → New environment** and create `Test`.
 2. Under **Environment secrets**, add `OPENROUTER_API_KEY` and `HF_TOKEN`.
 3. Under **Environment variables**, add the non-secret values below.
 
@@ -37,7 +37,7 @@ The repository includes two GitHub Actions workflows:
 
 Environment names are case-sensitive in workflow configuration. The remote environment is named `Test`.
 
-The current GitHub billing plan does not support native required reviewers or deployment-branch policies for this private repository. GitHub rejected both rules through its environment API. Until the plan supports them, the manual-only trigger, pre-environment `main` guard, explicit confirmation, read-only workflow permissions, immutable action pins, and separation from pull-request CI are compensating controls. Native independent approval remains the preferred control before any paid generation or deployment job is enabled.
+The `Test` environment is intended to require independent approval and accept deployments only from `main`. The repository's `main` branch is intended to require the Conformance check and pull-request review. The workflow's manual trigger, pre-environment `main` guard, explicit confirmation, read-only permissions, immutable action pins, and separation from pull-request CI remain defense-in-depth controls.
 
 ## Windows local environment
 

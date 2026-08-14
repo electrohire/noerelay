@@ -223,7 +223,7 @@ Only L3 may be lossy. Context is compiled by graph reachability from the active 
 
 ## Security and responsible disclosure
 
-This is a private ElectroHire repository. Do not place production credentials, customer data, proprietary model prompts, or regulated evidence in examples, commits, issues, or test fixtures. Report suspected vulnerabilities privately to the repository maintainers; see [SECURITY.md](SECURITY.md).
+This ElectroHire repository is publicly visible. Do not place production credentials, customer data, proprietary model prompts, regulated evidence, or other non-public material in examples, commits, issues, or test fixtures. Report suspected vulnerabilities privately to the repository maintainers; see [SECURITY.md](SECURITY.md).
 
 ## Development and contribution
 
@@ -243,4 +243,4 @@ Changes to normative behavior require corresponding schemas, examples, tests, an
 
 Copyright © 2026 ElectroHire. All rights reserved.
 
-This repository is private and proprietary. No open-source license or permission to copy, redistribute, sublicense, or use the software outside authorized ElectroHire work is granted. See [LICENSE](LICENSE).
+This repository is publicly visible and proprietary. Public access does not make it open source and grants no permission to copy, redistribute, sublicense, or use the software outside authorized ElectroHire work. See [LICENSE](LICENSE).

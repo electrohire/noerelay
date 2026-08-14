@@ -1,6 +1,6 @@
 # Contributing to NoeRelay
 
-NoeRelay is currently a private ElectroHire project. Contributions are limited to authorized collaborators.
+NoeRelay is publicly visible but remains a proprietary ElectroHire project. Contributions are limited to authorized collaborators unless ElectroHire expressly invites otherwise.
 
 ## Development workflow
 
