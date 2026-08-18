@@ -1,0 +1,5 @@
+{"id": "math-1", "input": {"messages": [{"role": "user", "content": "What is 2+2? Answer with just the number."}]}, "expected_output": "4", "evaluator": "contains"}
+{"id": "math-2", "input": {"messages": [{"role": "user", "content": "What is 15*3? Answer with just the number."}]}, "expected_output": "45", "evaluator": "contains"}
+{"id": "geography-1", "input": {"messages": [{"role": "user", "content": "What is the capital of France? Answer with just the city name."}]}, "expected_output": "Paris", "evaluator": "contains"}
+{"id": "geography-2", "input": {"messages": [{"role": "user", "content": "What is the capital of Japan? Answer with just the city name."}]}, "expected_output": "Tokyo", "evaluator": "contains"}
+{"id": "science-1", "input": {"messages": [{"role": "user", "content": "What is the chemical symbol for gold? Answer with just the symbol."}]}, "expected_output": "Au", "evaluator": "contains"}

@@ -1,0 +1,143 @@
+{
+  "electrohireZooCode": {
+    "schemaVersion": 1,
+    "projectId": "electrohire-defaults",
+    "outputFile": "electrohire-zoo-code.local.json",
+    "allowBuiltInModeMappings": true,
+    "allowedProviders": ["openrouter"],
+    "credentialBindings": [
+      {
+        "provider": "openrouter",
+        "environment": "OPENROUTER_API_KEY",
+        "field": "openRouterApiKey",
+        "required": true
+      }
+    ]
+  },
+  "providerProfiles": {
+    "currentApiConfigName": "Orchestrator",
+    "apiConfigs": {
+      "Fast": {
+        "id": "electrohire-or-fast-v3",
+        "apiProvider": "openrouter",
+        "openRouterModelId": "deepseek/deepseek-v4-flash",
+        "enableReasoningEffort": true,
+        "reasoningEffort": "high",
+        "modelMaxTokens": 16384,
+        "modelMaxThinkingTokens": 4096,
+        "modelTemperature": 0.2,
+        "todoListEnabled": false,
+        "consecutiveMistakeLimit": 3
+      },
+      "Code": {
+        "id": "electrohire-or-code-v3",
+        "apiProvider": "openrouter",
+        "openRouterModelId": "deepseek/deepseek-v4-pro",
+        "enableReasoningEffort": true,
+        "reasoningEffort": "high",
+        "modelMaxTokens": 32768,
+        "modelMaxThinkingTokens": 8192,
+        "modelTemperature": 0.1,
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
+      },
+      "Orchestrator": {
+        "id": "electrohire-or-orchestrator-v3",
+        "apiProvider": "openrouter",
+        "openRouterModelId": "z-ai/glm-5.2",
+        "enableReasoningEffort": true,
+        "reasoningEffort": "high",
+        "modelMaxTokens": 32768,
+        "modelMaxThinkingTokens": 8192,
+        "modelTemperature": 0.15,
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
+      },
+      "Architecture": {
+        "id": "electrohire-or-architecture-v3",
+        "apiProvider": "openrouter",
+        "openRouterModelId": "moonshotai/kimi-k3",
+        "enableReasoningEffort": true,
+        "reasoningEffort": "high",
+        "modelMaxTokens": 32768,
+        "modelMaxThinkingTokens": 8192,
+        "modelTemperature": 0.15,
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
+      },
+      "Review": {
+        "id": "electrohire-or-review-v3",
+        "apiProvider": "openrouter",
+        "openRouterModelId": "qwen/qwen3.8-max",
+        "enableReasoningEffort": true,
+        "reasoningEffort": "medium",
+        "modelMaxTokens": 65536,
+        "modelMaxThinkingTokens": 8192,
+        "modelTemperature": 0.1,
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
+      },
+      "Release": {
+        "id": "electrohire-or-release-v3",
+        "apiProvider": "openrouter",
+        "openRouterModelId": "openai/gpt-5.6-sol",
+        "enableReasoningEffort": true,
+        "reasoningEffort": "medium",
+        "modelMaxTokens": 65536,
+        "modelMaxThinkingTokens": 8192,
+        "modelTemperature": 0.1,
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
+      },
+      "Security": {
+        "id": "electrohire-or-security-v3",
+        "apiProvider": "openrouter",
+        "openRouterModelId": "openai/gpt-5.6-sol",
+        "enableReasoningEffort": true,
+        "reasoningEffort": "high",
+        "modelMaxTokens": 65536,
+        "modelMaxThinkingTokens": 16384,
+        "modelTemperature": 0.1,
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
+      }
+    },
+    "modeApiConfigs": {
+      "ask": "electrohire-or-fast-v3",
+      "architect": "electrohire-or-architecture-v3",
+      "code": "electrohire-or-code-v3",
+      "debug": "electrohire-or-code-v3",
+      "orchestrator": "electrohire-or-orchestrator-v3",
+      "reviewer": "electrohire-or-review-v3",
+      "long-horizon": "electrohire-or-review-v3",
+      "benchmark": "electrohire-or-orchestrator-v3",
+      "release": "electrohire-or-release-v3",
+      "security": "electrohire-or-security-v3"
+    }
+  },
+  "globalSettings": {
+    "mode": "orchestrator",
+    "autoApprovalEnabled": true,
+    "alwaysAllowReadOnly": true,
+    "alwaysAllowReadOnlyOutsideWorkspace": false,
+    "alwaysAllowWrite": false,
+    "alwaysAllowWriteOutsideWorkspace": false,
+    "alwaysAllowWriteProtected": false,
+    "alwaysAllowMcp": false,
+    "alwaysAllowModeSwitch": false,
+    "alwaysAllowSubtasks": false,
+    "alwaysAllowExecute": false,
+    "destructiveCommandGuardEnabled": false,
+    "alwaysAllowFollowupQuestions": false,
+    "allowedMaxRequests": 40,
+    "allowedMaxCost": 2.0,
+    "preventCompletionWithOpenTodos": true,
+    "autoCondenseContext": true,
+    "autoCondenseContextPercent": 75,
+    "includeCurrentTime": true,
+    "includeCurrentCost": true,
+    "enableCheckpoints": true,
+    "telemetrySetting": "disabled",
+    "mcpEnabled": true
+  }
+}

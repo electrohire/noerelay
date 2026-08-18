@@ -42,3 +42,6 @@ temp/
 artifacts/
 .cache/
 *.log
+
+# Zoo Code generated local bundles (contain resolved credentials)
+.zoo-code/*.local.json

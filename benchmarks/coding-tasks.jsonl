@@ -1,0 +1,5 @@
+{"id": "code-1", "input": {"messages": [{"role": "user", "content": "Write a Python function that returns the factorial of n. Only output the function, no explanation."}]}, "expected_output": "def factorial", "evaluator": "contains"}
+{"id": "code-2", "input": {"messages": [{"role": "user", "content": "Write a Python function that checks if a string is a palindrome. Only output the function, no explanation."}]}, "expected_output": "def", "evaluator": "contains"}
+{"id": "code-3", "input": {"messages": [{"role": "user", "content": "What is the time complexity of binary search? Answer with just the Big-O notation."}]}, "expected_output": "O(log n)", "evaluator": "contains"}
+{"id": "code-4", "input": {"messages": [{"role": "user", "content": "Write a SQL query to find the second highest salary from an employees table. Only output the query."}]}, "expected_output": "SELECT", "evaluator": "contains"}
+{"id": "code-5", "input": {"messages": [{"role": "user", "content": "What design pattern is used when you create objects without specifying the exact class? Answer with just the pattern name."}]}, "expected_output": "Factory", "evaluator": "contains"}
