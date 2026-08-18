@@ -21,3 +21,11 @@ def _load_env():
                 os.environ[key] = value
 
 _load_env()
+
+
+def pytest_configure(config):
+    """Register custom markers so pytest emits no unknown-marker warnings."""
+    config.addinivalue_line(
+        "markers",
+        "dashboard_ui: Playwright dashboard UI tests (auto-skipped without playwright)",
+    )
