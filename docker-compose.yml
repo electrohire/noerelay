@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  noerelay:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - noerelay-data:/data
+      - ./reference:/app/reference
+      - ./spec:/app/spec
+      - ./examples:/app/examples
+    environment:
+      - NOERELAY_OPENROUTER_MODE=stub
+      - NOERELAY_DATABASE_ENABLED=1
+      - NOERELAY_DATABASE_PATH=/data/noerelay.db
+      - NOERELAY_LOG_LEVEL=INFO
+      - NOERELAY_LOG_OUTPUT=stdout
+      - NOERELAY_CACHE_ENABLED=1
+      - NOERELAY_TLS_ENABLED=0
+      # Secrets (set in .env or Docker secrets)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  noerelay-data:
+  ollama-models:

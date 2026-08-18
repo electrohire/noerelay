@@ -7,10 +7,12 @@ from copy import deepcopy
 from pathlib import Path
 
 try:
-    from jsonschema import Draft202012Validator, RefResolver
+    from jsonschema import Draft202012Validator
+    from referencing import Registry, Resource
 except ImportError:  # Optional standards-level validation.
     Draft202012Validator = None
-    RefResolver = None
+    Registry = None
+    Resource = None
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,11 +51,17 @@ class JsonSchemaTests(unittest.TestCase):
             if "$id" in schema
         }
 
+    def _registry(self):
+        return Registry().with_resources(
+            (uri, Resource.from_contents(schema))
+            for uri, schema in self.store.items()
+        )
+
     def validator(self, name: str):
         schema = self.schemas[name]
         Draft202012Validator.check_schema(schema)
-        resolver = RefResolver.from_schema(schema, store=self.store)
-        return Draft202012Validator(schema, resolver=resolver)
+        registry = self._registry()
+        return Draft202012Validator(schema, registry=registry)
 
     def test_task_contract_matches_schema(self):
         self.validator("task-contract.schema.json").validate(

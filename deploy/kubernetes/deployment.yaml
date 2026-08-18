@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: noerelay
+  labels:
+    app: noerelay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: noerelay
+  template:
+    metadata:
+      labels:
+        app: noerelay
+    spec:
+      containers:
+      - name: noerelay
+        image: noerelay:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NOERELAY_DATABASE_PATH
+          value: /data/noerelay.db
+        - name: NOERELAY_DATABASE_ENABLED
+          value: "1"
+        - name: NOERELAY_LOG_OUTPUT
+          value: stdout
+        - name: OPENROUTER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: noerelay-secrets
+              key: openrouter-api-key
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: noerelay-secrets
+              key: hf-token
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: noerelay-data
