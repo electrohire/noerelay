@@ -637,6 +637,107 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("setInterval", html)
         self.assertIn("fetchJSON", html)
 
+    def test_dashboard_html_contains_all_sections(self):
+        html = render_dashboard()
+        section_names = [
+            "Overview",
+            "Models",
+            "Benchmarks",
+            "Governance",
+            "Routing",
+            "Analytics",
+            "Ledger",
+            "Tenants",
+            "API Keys",
+            "Alerts",
+            "Webhooks",
+            "Config",
+            "Audit Log",
+            "Settings",
+        ]
+        for name in section_names:
+            self.assertIn(name, html, f"Dashboard is missing section: {name}")
+
+        # Verify section DOM containers exist
+        for section_id in [
+            "section-overview",
+            "section-models",
+            "section-benchmarks",
+            "section-governance",
+            "section-routing",
+            "section-analytics",
+            "section-ledger",
+            "section-tenants",
+            "section-apikeys",
+            "section-alerts",
+            "section-webhooks",
+            "section-config",
+            "section-audit",
+            "section-settings",
+        ]:
+            self.assertIn(section_id, html, f"Dashboard is missing section id: {section_id}")
+
+    def test_dashboard_html_contains_css(self):
+        html = render_dashboard()
+        # Dark theme via CSS variables
+        self.assertIn("--bg:", html)
+        self.assertIn("--bg2:", html)
+        self.assertIn("--text:", html)
+        self.assertIn("--accent:", html)
+        # Sidebar layout
+        self.assertIn("#sidebar", html)
+        self.assertIn("sidebar-w", html)
+        self.assertIn("position: fixed", html)
+        # Flexbox/Grid layout (no floats)
+        self.assertIn("display: flex", html)
+        self.assertIn("display: grid", html)
+        # Responsive
+        self.assertIn("@media", html)
+        self.assertIn("max-width", html)
+        # Color-coded status
+        self.assertIn(".status-dot", html)
+        self.assertIn("--green", html)
+        self.assertIn("--red", html)
+        self.assertIn("--yellow", html)
+
+    def test_dashboard_html_contains_chart_js(self):
+        html = render_dashboard()
+        # Canvas-based charts
+        self.assertIn("canvas", html)
+        self.assertIn("getContext('2d')", html)
+        self.assertIn("drawBarChart", html)
+        self.assertIn("drawLineChart", html)
+        # fetch() API calls
+        self.assertIn("fetch(", html)
+        self.assertIn("fetchJSON", html)
+        # localStorage preferences
+        self.assertIn("localStorage", html)
+        # Toast notifications
+        self.assertIn("showToast", html)
+        # Modal dialogs
+        self.assertIn("modal-overlay", html)
+        self.assertIn("showModal", html)
+        # Loading spinner
+        self.assertIn("spinner", html)
+
+    def test_dashboard_html_no_overlap_layout(self):
+        html = render_dashboard()
+        # Sidebar is fixed-width and main content offsets by that width,
+        # preventing the two from overlapping.
+        self.assertIn("--sidebar-w: 220px", html)
+        self.assertIn("margin-left: var(--sidebar-w)", html)
+        # Top bar uses its own fixed height + sticky positioning, separate
+        # from the scrollable content area (no absolute overlap with status).
+        self.assertIn("--topbar-h: 48px", html)
+        self.assertIn("position: sticky", html)
+        # Top bar explicitly separates left (status) and right (refresh) groups.
+        self.assertIn("tb-left", html)
+        self.assertIn("tb-right", html)
+        # Proper box-sizing + padding prevents border/padding overlap.
+        self.assertIn("box-sizing: border-box", html)
+        # Content area is independently scrollable.
+        self.assertIn("overflow-y: auto", html)
+
 
 # ---------------------------------------------------------------------------
 # Analytics Engine Helpers
