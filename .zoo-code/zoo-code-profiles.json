@@ -4,13 +4,19 @@
     "projectId": "electrohire-defaults",
     "outputFile": "electrohire-zoo-code.local.json",
     "allowBuiltInModeMappings": true,
-    "allowedProviders": ["openrouter"],
+    "allowedProviders": ["openrouter", "openai"],
     "credentialBindings": [
       {
         "provider": "openrouter",
         "environment": "OPENROUTER_API_KEY",
         "field": "openRouterApiKey",
         "required": true
+      },
+      {
+        "provider": "openai",
+        "environment": "NOERELAY_API_KEY",
+        "field": "openAiApiKey",
+        "required": false
       }
     ]
   },
@@ -100,19 +106,41 @@
         "modelTemperature": 0.1,
         "todoListEnabled": true,
         "consecutiveMistakeLimit": 3
+      },
+      "NoeRelay": {
+        "id": "noerelay-local",
+        "apiProvider": "openai",
+        "openAiBaseUrl": "http://127.0.0.1:8080/v1",
+        "openAiModelId": "noerelay/epr-1",
+        "modelMaxTokens": 4096,
+        "modelTemperature": 0.7,
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
+      },
+      "NoeRelayTest": {
+        "id": "noerelay-test",
+        "apiProvider": "openai",
+        "openAiBaseUrl": "http://127.0.0.1:8080/v1",
+        "openAiModelId": "noerelay/epr-1",
+        "modelMaxTokens": 8192,
+        "modelTemperature": 0.3,
+        "system_prompt": "You are a NoeRelay test subagent. Your job is to test the NoeRelay gateway by sending requests and verifying responses. Available endpoints: http://127.0.0.1:8080/v1/chat/completions, http://127.0.0.1:8080/health, http://127.0.0.1:8080/metrics, http://127.0.0.1:8080/dashboard. You can run benchmarks with: python scripts/run_benchmark.py --inline --cohort test --gateway-url http://127.0.0.1:8080. You can run tests with: python -m pytest tests/ -v.",
+        "todoListEnabled": true,
+        "consecutiveMistakeLimit": 3
       }
     },
     "modeApiConfigs": {
-      "ask": "electrohire-or-fast-v3",
-      "architect": "electrohire-or-architecture-v3",
-      "code": "electrohire-or-code-v3",
-      "debug": "electrohire-or-code-v3",
-      "orchestrator": "electrohire-or-orchestrator-v3",
+      "ask": "noerelay-local",
+      "architect": "noerelay-local",
+      "code": "noerelay-local",
+      "debug": "noerelay-local",
+      "orchestrator": "noerelay-local",
       "reviewer": "electrohire-or-review-v3",
       "long-horizon": "electrohire-or-review-v3",
       "benchmark": "electrohire-or-orchestrator-v3",
       "release": "electrohire-or-release-v3",
-      "security": "electrohire-or-security-v3"
+      "security": "electrohire-or-security-v3",
+      "test": "noerelay-test"
     }
   },
   "globalSettings": {
