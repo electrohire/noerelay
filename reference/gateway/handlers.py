@@ -312,6 +312,31 @@ def handle_metrics(
             pass
         prom.set_gauge("noerelay_local_models_count", float(local_count))
 
+        # Sync RTK compression metrics (Phase 4)
+        try:
+            from .compression import get_cache_stats, get_profiler_stats
+            cache_stats = get_cache_stats()
+            if cache_stats:
+                prom.set_gauge("noerelay_compression_cache_hits_total", float(cache_stats.get("hits", 0)))
+                prom.set_gauge("noerelay_compression_cache_misses_total", float(cache_stats.get("misses", 0)))
+            profiler_stats = get_profiler_stats()
+            if profiler_stats and profiler_stats.get("overall", {}).get("count", 0) > 0:
+                overall = profiler_stats["overall"]
+                prom.set_gauge("noerelay_compression_total", float(overall.get("count", 0)))
+                prom.set_gauge("noerelay_compression_tokens_saved_total", float(overall.get("total_tokens_saved", 0)))
+                prom.set_gauge("noerelay_compression_avg_ratio", float(overall.get("avg_ratio", 0)))
+                # Compute avg quality across all strategies
+                total_quality = 0.0
+                quality_count = 0
+                for key, s in profiler_stats.items():
+                    if key != "overall" and s.get("avg_quality") is not None:
+                        total_quality += s["avg_quality"] * s.get("count", 0)
+                        quality_count += s.get("count", 0)
+                if quality_count > 0:
+                    prom.set_gauge("noerelay_compression_avg_quality", total_quality / quality_count)
+        except Exception:
+            pass
+
         # Also sync runs totals from registry
         runs = getattr(ctx.registry, "_runs", {})
         active = sum(

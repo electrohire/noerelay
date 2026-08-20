@@ -1,0 +1,18 @@
+[package]
+name = "noerelay-rtk"
+version = "0.1.0"
+edition = "2021"
+description = "Rust Token Killer — native compression for the NoeRelay gateway"
+license = "MIT"
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+
+[lib]
+name = "noerelay_rtk"
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
