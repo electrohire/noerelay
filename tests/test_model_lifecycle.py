@@ -1170,6 +1170,8 @@ class TrueCostModelTests(unittest.TestCase):
         expected_keys = {
             "direct", "rework", "human", "escalation",
             "latency", "infrastructure", "total_per_case",
+            "compression_ratio", "tokens_saved", "cost_savings",
+            "original_tokens_per_case", "estimated_cost_no_compression",
         }
         self.assertEqual(set(d.keys()), expected_keys)
 

@@ -47,6 +47,7 @@ class RunRecord:
     completion_tokens: int = 0
     actual_cost_usd: float = 0.0
     latency_ms: float = 0.0
+    original_prompt_tokens: int = 0
     required_human_intervention: bool = False
     required_rework: bool = False
     human_intervention_reason: str | None = None

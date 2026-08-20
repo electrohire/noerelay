@@ -15,6 +15,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from .compression import CompressionConfig
+
 
 class ConfigError(RuntimeError):
     """A sanitized configuration error safe to surface at startup."""
@@ -126,6 +128,7 @@ class GatewayConfig:
     tls_enabled: bool
     tls_cert_path: str | None
     tls_key_path: str | None
+    compression: CompressionConfig
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "GatewayConfig":
@@ -275,6 +278,8 @@ class GatewayConfig:
                 key_path if key_path.is_absolute() else ROOT / key_path
             )
 
+        compression = CompressionConfig.from_env(env)
+
         return cls(
             host=host,
             port=port,
@@ -311,4 +316,5 @@ class GatewayConfig:
             tls_enabled=tls_enabled,
             tls_cert_path=tls_cert_path,
             tls_key_path=tls_key_path,
+            compression=compression,
         )
