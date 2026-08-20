@@ -31,6 +31,13 @@ _HELP_TEXT: dict[str, str] = {
     "noerelay_model_cost_total": "Total cost in USD per model.",
     "noerelay_tenant_spend_total": "Total spend in USD per tenant.",
     "noerelay_risk_class_runs_total": "Total runs per risk class.",
+    # RTK compression metrics (Phase 4)
+    "noerelay_compression_total": "Total number of compression operations.",
+    "noerelay_compression_tokens_saved_total": "Total tokens saved by compression.",
+    "noerelay_compression_cache_hits_total": "Total compression cache hits.",
+    "noerelay_compression_cache_misses_total": "Total compression cache misses.",
+    "noerelay_compression_avg_ratio": "Average compression ratio (0-1).",
+    "noerelay_compression_avg_quality": "Average compression quality score (0-1).",
 }
 
 _TYPE_TEXT: dict[str, str] = {
@@ -49,6 +56,13 @@ _TYPE_TEXT: dict[str, str] = {
     "noerelay_model_cost_total": "counter",
     "noerelay_tenant_spend_total": "counter",
     "noerelay_risk_class_runs_total": "counter",
+    # RTK compression metrics (Phase 4)
+    "noerelay_compression_total": "gauge",
+    "noerelay_compression_tokens_saved_total": "gauge",
+    "noerelay_compression_cache_hits_total": "gauge",
+    "noerelay_compression_cache_misses_total": "gauge",
+    "noerelay_compression_avg_ratio": "gauge",
+    "noerelay_compression_avg_quality": "gauge",
 }
 
 

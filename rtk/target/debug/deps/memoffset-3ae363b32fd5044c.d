@@ -1,0 +1,8 @@
+C:\Users\trist\Development\ElectroHire\norelay\rtk\target\debug\deps\memoffset-3ae363b32fd5044c.d: C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\lib.rs C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\raw_field.rs C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\offset_of.rs C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\span_of.rs
+
+C:\Users\trist\Development\ElectroHire\norelay\rtk\target\debug\deps\libmemoffset-3ae363b32fd5044c.rmeta: C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\lib.rs C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\raw_field.rs C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\offset_of.rs C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\span_of.rs
+
+C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\lib.rs:
+C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\raw_field.rs:
+C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\offset_of.rs:
+C:\Users\trist\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memoffset-0.9.1\src\span_of.rs:
