@@ -1,0 +1,32 @@
+name: Benchmark
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly on Monday at 6 AM
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest jsonschema referencing
+
+    - name: Run benchmarks (stub mode)
+      env:
+        NOERELAY_OPENROUTER_MODE: stub
+      run: |
+        cd reference
+        python -m gateway &
+        sleep 3
+        cd ..
+        python scripts/run_benchmark.py --inline --cohort "ci-benchmark" --gateway-url http://127.0.0.1:8080
