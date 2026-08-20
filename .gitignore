@@ -45,3 +45,6 @@ artifacts/
 
 # Zoo Code generated local bundles (contain resolved credentials)
 .zoo-code/*.local.json
+
+# Rust build artifacts
+rtk/target/

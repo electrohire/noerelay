@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "noerelay-rtk"
+version = "0.1.0"
+description = "Rust Token Killer — native compression for the NoeRelay gateway"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "."
