@@ -2,6 +2,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+ENV PYTHONPATH=/app/reference
+
 # Copy project files
 COPY reference/ ./reference/
 COPY spec/ ./spec/
