@@ -576,6 +576,65 @@ class EpistemicLedgerEnricher:
         return payload
 
     # ------------------------------------------------------------------
+    # Context compression enrichment
+    # ------------------------------------------------------------------
+
+    def enrich_context_compressed(
+        self,
+        original_token_count: int,
+        compressed_token_count: int,
+        compression_ratio: float,
+        strategy: str,
+        duration_ms: float,
+        tokens_saved: int,
+        skipped: bool,
+        epistemic_state: Any,
+    ) -> dict[str, Any]:
+        """Enrich a context_compressed event with epistemic context.
+
+        Returns a payload dict containing:
+        - original_token_count, compressed_token_count
+        - compression_ratio, strategy, duration_ms
+        - tokens_saved, skipped
+        - epistemic_state_snapshot: claims at compression time
+        """
+        snapshot = self.snapshot_epistemic_state(epistemic_state)
+
+        reasoning = (
+            f"Context compressed using '{strategy}' strategy: "
+            f"{original_token_count} -> {compressed_token_count} tokens "
+            f"({compression_ratio:.1%} reduction, {tokens_saved} tokens saved, "
+            f"{duration_ms:.1f}ms)."
+        ) if not skipped else (
+            "Compression skipped (disabled or below threshold)."
+        )
+
+        payload: dict[str, Any] = {
+            "original_token_count": original_token_count,
+            "compressed_token_count": compressed_token_count,
+            "compression_ratio": compression_ratio,
+            "strategy": strategy,
+            "duration_ms": duration_ms,
+            "tokens_saved": tokens_saved,
+            "skipped": skipped,
+            "reasoning": reasoning,
+            "epistemic_state_snapshot": snapshot,
+        }
+
+        # Record in decision history
+        self._decision_history.append({
+            "step": "context_compressed",
+            "timestamp": _now(),
+            "reasoning": reasoning,
+            "epistemic_state": snapshot,
+            "strategy": strategy,
+            "compression_ratio": compression_ratio,
+            "tokens_saved": tokens_saved,
+        })
+
+        return payload
+
+    # ------------------------------------------------------------------
     # Epistemic state snapshot
     # ------------------------------------------------------------------
 

@@ -20,6 +20,7 @@ from typing import Any
 
 from epr.kernel import select_route
 
+from .compression import compress_messages
 from .config import ConfigError, GatewayConfig
 from .context import ContextCompactor, ContextCompiler, build_canonical_state
 from .contracts import compile_task_contract, requires_clarification
@@ -848,6 +849,37 @@ def run_inference_pipeline(
         run_id, "context_compiled", GATEWAY_ACTOR, subject_id, {"capsule_id": capsule_id}
     )
 
+    # ------------------------------------------------------------------
+    # RTK Phase 1: context compression (between context_compiled and
+    # route_selected). The router sees original token counts; the LLM
+    # receives compressed messages.
+    # ------------------------------------------------------------------
+    original_messages = list(request["messages"])
+    compression_result = compress_messages(request["messages"], ctx.config.compression)
+
+    # Record original token count before compression for cost tracking.
+    record.original_prompt_tokens = compression_result.original_token_count
+
+    if not compression_result.skipped:
+        # Replace request messages with compressed version for the LLM call.
+        request["messages"] = compression_result.compressed_messages
+
+    ctx.registry.ledger(
+        run_id,
+        "context_compressed",
+        GATEWAY_ACTOR,
+        subject_id,
+        {
+            "original_token_count": compression_result.original_token_count,
+            "compressed_token_count": compression_result.compressed_token_count,
+            "compression_ratio": compression_result.compression_ratio,
+            "strategy": compression_result.strategy,
+            "duration_ms": compression_result.duration_ms,
+            "tokens_saved": compression_result.tokens_saved,
+            "skipped": compression_result.skipped,
+        },
+    )
+
     # Route (EPR-ROUTE-004: retain rejected-candidate reasons).
     decision = stage_route(contract, routing_portfolio, routing_policy)
     record.decision = decision
@@ -1119,6 +1151,17 @@ def run_inference_pipeline(
 
     content = upstream["choices"][0]["message"]["content"]
     fallback_summary = record.fallbacks.get_fallback_summary()
+    compression_meta = None
+    if not compression_result.skipped:
+        compression_meta = {
+            "enabled": True,
+            "original_tokens": compression_result.original_token_count,
+            "compressed_tokens": compression_result.compressed_token_count,
+            "ratio": compression_result.compression_ratio,
+            "strategy": compression_result.strategy,
+            "duration_ms": compression_result.duration_ms,
+            "tokens_saved": compression_result.tokens_saved,
+        }
     epr = render_epr_metadata(
         run_id=run_id,
         trace_id=trace_id,
@@ -1134,6 +1177,7 @@ def run_inference_pipeline(
         semantic_fallback_count=fallback_summary["semantic_fallback_count"],
         required_human_intervention=record.required_human_intervention,
         required_rework=record.required_rework,
+        compression=compression_meta,
     )
     usage = {
         "prompt_tokens": record.prompt_tokens,

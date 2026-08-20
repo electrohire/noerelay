@@ -61,8 +61,9 @@ def render_epr_metadata(
     required_human_intervention: bool = False,
     required_rework: bool = False,
     cache_hit: bool = False,
+    compression: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    result: dict[str, Any] = {
         "run_id": run_id,
         "trace_id": trace_id,
         "status": status,
@@ -79,6 +80,9 @@ def render_epr_metadata(
         "required_rework": required_rework,
         "cache_hit": cache_hit,
     }
+    if compression is not None:
+        result["compression"] = compression
+    return result
 
 
 def render_chat_completion(

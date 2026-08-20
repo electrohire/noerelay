@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "reference"))
 
+from gateway.compression import CompressionConfig
 from gateway.config import ConfigError, GatewayConfig
 from gateway.openrouter import HttpOpenRouterClient, OpenRouterError
 from gateway.local_models import LocalModelClient, LocalModelError
@@ -73,6 +74,7 @@ def _make_config(**overrides) -> GatewayConfig:
         "tls_enabled": False,
         "tls_cert_path": None,
         "tls_key_path": None,
+        "compression": CompressionConfig(),
     }
     defaults.update(overrides)
     return GatewayConfig(**defaults)

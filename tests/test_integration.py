@@ -522,6 +522,7 @@ class MetricsEndpointIntegrationTests(unittest.TestCase):
 
     @classmethod
     def _make_config(cls):
+        from gateway.compression import CompressionConfig
         from gateway.config import GatewayConfig
         return GatewayConfig(
             host="127.0.0.1",
@@ -559,6 +560,7 @@ class MetricsEndpointIntegrationTests(unittest.TestCase):
             tls_enabled=False,
             tls_cert_path=None,
             tls_key_path=None,
+            compression=CompressionConfig(),
         )
 
     def test_handle_metrics_json_format(self):

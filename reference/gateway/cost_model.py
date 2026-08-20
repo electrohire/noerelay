@@ -21,7 +21,7 @@ class CostComponents:
 
     # Direct inference cost
     per_token_cost_usd: float  # cost per 1K tokens (prompt + completion weighted)
-    tokens_per_case: float  # mean tokens consumed per case
+    tokens_per_case: float  # mean tokens consumed per case (compressed)
 
     # Rework cost (when verification fails and fallback/repair is needed)
     rework_rate: float  # fraction of cases requiring rework (0.0-1.0)
@@ -43,6 +43,11 @@ class CostComponents:
     # Infrastructure cost (for local models: electricity, hardware amortization)
     infrastructure_cost_per_hour_usd: float  # hardware/electricity cost
     utilization_rate: float  # fraction of time the model is actually used (0.0-1.0)
+
+    # Compression tracking (Phase 1 — defaults for backward compat)
+    original_tokens_per_case: float = 0.0  # mean tokens before compression
+    tokens_saved: float = 0.0  # mean tokens saved by compression per case
+    compression_ratio: float = 0.0  # mean compression ratio (0.0-1.0)
 
     @property
     def direct_cost_per_case(self) -> float:
@@ -80,6 +85,16 @@ class CostComponents:
         return self.infrastructure_cost_per_hour_usd / max(cases_per_hour, 1)
 
     @property
+    def estimated_cost_no_compression(self) -> float:
+        """What direct cost would have been without compression."""
+        return self.per_token_cost_usd * (self.original_tokens_per_case / 1000)
+
+    @property
+    def cost_savings(self) -> float:
+        """Cost savings from compression per case."""
+        return self.estimated_cost_no_compression - self.direct_cost_per_case
+
+    @property
     def total_cost_per_case(self) -> float:
         """TRUE total cost of ownership per case — all components."""
         return (
@@ -101,6 +116,13 @@ class CostComponents:
             "latency": round(self.latency_cost_per_case, 8),
             "infrastructure": round(self.infrastructure_cost_per_case, 8),
             "total_per_case": round(self.total_cost_per_case, 8),
+            "compression_ratio": round(self.compression_ratio, 4),
+            "tokens_saved": self.tokens_saved,
+            "cost_savings": round(self.cost_savings, 8),
+            "original_tokens_per_case": self.original_tokens_per_case,
+            "estimated_cost_no_compression": round(
+                self.estimated_cost_no_compression, 8,
+            ),
         }
 
 
@@ -149,6 +171,10 @@ class TrueCostModel:
         else:
             per_token_cost_usd = 0.0
 
+        compression_ratio = float(model_stats.get("compression_ratio", 0) or 0)
+        original_tokens = float(model_stats.get("original_tokens_per_case", tokens_per_case) or tokens_per_case)
+        tokens_saved = original_tokens - tokens_per_case
+
         return CostComponents(
             per_token_cost_usd=per_token_cost_usd,
             tokens_per_case=tokens_per_case,
@@ -167,6 +193,9 @@ class TrueCostModel:
             utilization_rate=(
                 self._params["utilization_rate"] if is_local else 1.0
             ),
+            original_tokens_per_case=original_tokens,
+            tokens_saved=max(0, tokens_saved),
+            compression_ratio=compression_ratio,
         )
 
     def compute_true_cost_per_correct(
