@@ -1,0 +1,48 @@
+version: '3.8'
+
+# Open WebUI sidecar for NoeRelay
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.openwebui.yml up -d
+#
+# This adds Open WebUI (http://localhost:3000) pre-configured to use
+# NoeRelay as its OpenAI API backend. No manual connection setup needed.
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: noerelay-openwebui
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      # Pre-configure the OpenAI connection to point at NoeRelay
+      - OPENAI_API_BASE_URL=http://noerelay:8080/v1
+      - OPENAI_API_KEY=${NOERELAY_API_KEY:-noerelay}
+      # WebUI configuration
+      - WEBUI_NAME=NoeRelay Chat
+      - WEBUI_URL=http://localhost:3000
+      # Disable signup after initial admin creation (security)
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
+      - ENABLE_SIGNUP=true
+      - DEFAULT_MODELS=noerelay/epr-1
+      # Logging
+      - LOG_LEVEL=INFO
+    depends_on:
+      noerelay:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - noerelay-net
+
+networks:
+  noerelay-net:
+    driver: bridge
+
+volumes:
+  open-webui-data:

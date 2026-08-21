@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: noerelay-config
+  labels:
+    app: noerelay
+data:
+  NOERELAY_GATEWAY_HOST: "0.0.0.0"
+  NOERELAY_GATEWAY_PORT: "8080"
+  NOERELAY_OPENROUTER_MODE: "live"
+  NOERELAY_DATABASE_ENABLED: "1"
+  NOERELAY_DATABASE_PATH: "/data/noerelay.db"
+  NOERELAY_LOG_LEVEL: "INFO"
+  NOERELAY_LOG_OUTPUT: "stdout"
+  NOERELAY_CACHE_ENABLED: "1"
+  NOERELAY_TLS_ENABLED: "0"
+  NOERELAY_DEFAULT_MAX_COST_USD: "0.25"
+  NOERELAY_DEFAULT_MAX_LATENCY_MS: "60000"
+  NOERELAY_EXTERNAL_BASE_URL: "https://noerelay.example.com"

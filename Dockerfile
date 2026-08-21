@@ -1,20 +1,33 @@
-FROM python:3.12-slim
+# ---- Build stage ----
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+# Copy only what's needed for the reference kernel
+COPY reference/ ./reference/
+COPY spec/ ./spec/
+COPY examples/ ./examples/
+
+# ---- Runtime stage ----
+FROM python:3.12-slim AS runtime
+
+# Create non-root user
+RUN groupadd -r noerelay && useradd -r -g noerelay -d /app -s /sbin/nologin noerelay
 
 WORKDIR /app
 
 ENV PYTHONPATH=/app/reference
 
-# Copy project files
-COPY reference/ ./reference/
-COPY spec/ ./spec/
-COPY examples/ ./examples/
-COPY scripts/ ./scripts/
-COPY benchmarks/ ./benchmarks/
-COPY tests/ ./tests/
-COPY .env.example ./.env.example
+# Copy application from builder
+COPY --from=builder /app/reference/ ./reference/
+COPY --from=builder /app/spec/ ./spec/
+COPY --from=builder /app/examples/ ./examples/
 
-# Install pytest for testing (dev only)
-RUN pip install --no-cache-dir pytest jsonschema referencing
+# Copy scripts (needed for model lifecycle, etc.)
+COPY scripts/ ./scripts/
+
+# No pip install — the reference kernel is dependency-free at runtime.
+# Schema validation and tests are run in CI, not in the production image.
 
 # Expose gateway port
 EXPOSE 8080
@@ -31,5 +44,8 @@ ENV NOERELAY_DATABASE_PATH=/data/noerelay.db
 ENV NOERELAY_LOG_OUTPUT=stdout
 
 VOLUME ["/data"]
+
+# Switch to non-root user
+USER noerelay
 
 CMD ["python", "-m", "gateway"]
