@@ -460,21 +460,31 @@ impl ResponsesConverter {
     }
 
     pub fn format_response(response: &CanonicalResponse) -> Value {
-        let output: Vec<Value> = response
-            .choices
-            .iter()
-            .filter_map(|choice| choice.message.as_ref())
-            .enumerate()
-            .map(|(index, message)| {
-                json!({
-                    "id": format!("msg_{index}"),
-                    "type": "message",
-                    "role": message.role,
-                    "content": response_content_items(message.content.as_ref()),
-                    "status": "completed",
-                })
-            })
-            .collect();
+        let mut output = Vec::new();
+        for choice in &response.choices {
+            let Some(message) = choice.message.as_ref() else {
+                continue;
+            };
+            output.push(json!({
+                "type": "message",
+                "id": format!("msg_{}", response.id),
+                "status": "completed",
+                "role": "assistant",
+                "content": response_content_items(message.content.as_ref()),
+            }));
+            if let Some(tool_calls) = &message.tool_calls {
+                output.extend(tool_calls.iter().map(|call| {
+                    json!({
+                        "type": "function_call",
+                        "id": format!("fc_{}", call.id),
+                        "call_id": call.id,
+                        "name": call.function.name,
+                        "arguments": call.function.arguments,
+                        "status": "completed",
+                    })
+                }));
+            }
+        }
         let usage = response.usage.as_ref().map(|usage| {
             json!({
                 "input_tokens": usage.prompt_tokens,
@@ -483,8 +493,9 @@ impl ResponsesConverter {
             })
         });
         json!({
-            "id": response.id,
+            "id": format!("resp_{}", response.id),
             "object": "response",
+            "created_at": chrono::Utc::now().timestamp(),
             "status": "completed",
             "model": response.model,
             "output": output,
@@ -650,8 +661,16 @@ fn build_request(
         messages,
         model,
         temperature: optional(object, "temperature")?,
-        max_tokens: optional(object, max_tokens_field)?,
-        max_completion_tokens: optional(object, "max_completion_tokens")?,
+        max_tokens: if max_tokens_field == "max_tokens" {
+            optional(object, max_tokens_field)?
+        } else {
+            None
+        },
+        max_completion_tokens: if max_tokens_field == "max_output_tokens" {
+            optional(object, max_tokens_field)?
+        } else {
+            optional(object, "max_completion_tokens")?
+        },
         top_p: optional(object, "top_p")?,
         frequency_penalty: optional(object, "frequency_penalty")?,
         presence_penalty: optional(object, "presence_penalty")?,
