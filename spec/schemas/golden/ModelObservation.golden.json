@@ -1,0 +1,8 @@
+{
+  "cohort": "coding",
+  "candidate_id": "candidate-1",
+  "accepted": true,
+  "cost_microusd": 1500,
+  "latency_ms": 250,
+  "observed_at_unix_ms": 1724000000000
+}

@@ -15,6 +15,7 @@ normative table of defaults.
 from __future__ import annotations
 
 from collections.abc import Mapping
+import math
 from typing import Any
 
 # Fixed defaults (documented in docs/gateway.md).
@@ -112,6 +113,8 @@ def validate_governance(governance: Mapping[str, Any]) -> list[str]:
         cost = governance["max_cost_usd"]
         if isinstance(cost, bool) or not isinstance(cost, (int, float)):
             errors.append("max_cost_usd_must_be_number")
+        elif not math.isfinite(cost):
+            errors.append("max_cost_usd_must_be_finite")
         elif cost <= 0:
             errors.append("max_cost_usd_must_be_positive")
 
@@ -128,6 +131,8 @@ def validate_governance(governance: Mapping[str, Any]) -> list[str]:
         probability = governance["required_acceptance_probability"]
         if isinstance(probability, bool) or not isinstance(probability, (int, float)):
             errors.append("required_acceptance_probability_must_be_number")
+        elif not math.isfinite(probability):
+            errors.append("required_acceptance_probability_must_be_finite")
         elif not (0 <= probability <= 1):
             errors.append("required_acceptance_probability_out_of_range")
 

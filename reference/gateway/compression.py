@@ -26,6 +26,7 @@ The router sees original token counts; the LLM receives compressed messages.
 from __future__ import annotations
 
 import os
+import math
 import re
 import time
 from collections import Counter
@@ -967,6 +968,8 @@ def _parse_float(
         parsed = float(raw)
     except ValueError:
         raise ValueError(f"{name} must be a number; got {raw!r}") from None
+    if not math.isfinite(parsed):
+        raise ValueError(f"{name} must be a finite number; got {raw!r}")
     if minimum is not None and parsed < minimum:
         raise ValueError(f"{name} must be >= {minimum}; got {parsed}")
     if maximum is not None and parsed > maximum:

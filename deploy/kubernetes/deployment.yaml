@@ -14,6 +14,10 @@ spec:
       labels:
         app: noerelay
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: noerelay
         image: noerelay:latest
@@ -28,17 +32,33 @@ spec:
             secretKeyRef:
               name: noerelay-secrets
               key: openrouter-api-key
-        - name: HF_TOKEN
+        - name: NOERELAY_API_KEY
           valueFrom:
             secretKeyRef:
               name: noerelay-secrets
-              key: hf-token
+              key: api-key
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: noerelay-secrets
+              key: database-url
+        - name: NOERELAY_RECEIPT_SIGNING_SEED_HEX
+          valueFrom:
+            secretKeyRef:
+              name: noerelay-secrets
+              key: receipt-signing-seed-hex
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
         volumeMounts:
-        - name: data
-          mountPath: /data
+        - name: tmp
+          mountPath: /tmp
         readinessProbe:
           httpGet:
-            path: /health
+            path: /ready
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -56,6 +76,5 @@ spec:
             memory: "1Gi"
             cpu: "1000m"
       volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: noerelay-data
+      - name: tmp
+        emptyDir: {}

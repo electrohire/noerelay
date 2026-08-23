@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Open WebUI sidecar for NoeRelay
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.openwebui.yml up -d
 #
@@ -17,7 +15,7 @@ services:
     environment:
       # Pre-configure the OpenAI connection to point at NoeRelay
       - OPENAI_API_BASE_URL=http://noerelay:8080/v1
-      - OPENAI_API_KEY=${NOERELAY_API_KEY:-noerelay}
+      - OPENAI_API_KEY=${NOERELAY_API_KEY:-noerelay-local-development-key-0001}
       # WebUI configuration
       - WEBUI_NAME=NoeRelay Chat
       - WEBUI_URL=http://localhost:3000
@@ -37,12 +35,6 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
-    networks:
-      - noerelay-net
-
-networks:
-  noerelay-net:
-    driver: bridge
 
 volumes:
   open-webui-data:

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Requirement",
+  "type": "object",
+  "required": [
+    "architecture_refs",
+    "must",
+    "outcome",
+    "requirement_id"
+  ],
+  "properties": {
+    "architecture_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "must": {
+      "type": "boolean"
+    },
+    "outcome": {
+      "type": "string"
+    },
+    "requirement_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -23,6 +23,10 @@ class ResponseCache:
     """
 
     def __init__(self, max_size: int = 100, ttl_seconds: int = 3600) -> None:
+        if max_size < 1:
+            raise ValueError("max_size must be at least 1")
+        if ttl_seconds < 0:
+            raise ValueError("ttl_seconds must not be negative")
         self._cache: dict[str, dict[str, Any]] = {}
         self._max_size = max_size
         self._ttl = ttl_seconds
@@ -36,6 +40,7 @@ class ResponseCache:
                 "messages": request.get("messages", []),
                 "passthrough": request.get("passthrough", {}),
                 "governance": request.get("governance", {}),
+                "tenant_id": request.get("tenant_id", "default"),
             },
             sort_keys=True,
             separators=(",", ":"),

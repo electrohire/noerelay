@@ -24,6 +24,7 @@ Schema:
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import threading
 import uuid
@@ -46,10 +47,41 @@ class SQLiteDatabase:
     def __init__(self, db_path: str = ".noerelay/noerelay.db") -> None:
         self._db_path = Path(db_path)
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        if os.name != "nt":
+            try:
+                self._db_path.parent.chmod(0o700)
+            except OSError:
+                pass
         self._local = threading.local()
         self._lock = threading.Lock()
         self._connections: list[sqlite3.Connection] = []
         self._init_schema()
+        self._restrict_file_permissions(self._db_path)
+
+    @staticmethod
+    def _restrict_file_permissions(path: Path) -> None:
+        """Restrict sensitive database artifacts on POSIX hosts."""
+        if os.name != "nt" and path.exists():
+            try:
+                path.chmod(0o600)
+            except OSError:
+                pass
+
+    def close_thread_connection(self) -> None:
+        """Close the current worker thread's SQLite connection."""
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            return
+        self._local.conn = None
+        with self._lock:
+            try:
+                self._connections.remove(conn)
+            except ValueError:
+                pass
+        try:
+            conn.close()
+        except sqlite3.Error:
+            pass
 
     def close(self) -> None:
         """Close all database connections."""
@@ -57,13 +89,13 @@ class SQLiteDatabase:
             for conn in self._connections:
                 try:
                     conn.close()
-                except Exception:
+                except sqlite3.Error:
                     pass
             self._connections.clear()
         if hasattr(self._local, "conn") and self._local.conn is not None:
             try:
                 self._local.conn.close()
-            except Exception:
+            except sqlite3.Error:
                 pass
             self._local.conn = None
 
@@ -184,7 +216,28 @@ class SQLiteDatabase:
                 updated_at TEXT NOT NULL,
                 updated_by TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS run_tenants (
+                run_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL DEFAULT 'default',
+                FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE
+            );
         """)
+
+    def set_run_tenant(self, run_id: str, tenant_id: str) -> None:
+        """Persist the tenant owner separately from the stable run schema."""
+        self._get_conn().execute(
+            "INSERT OR REPLACE INTO run_tenants (run_id, tenant_id) VALUES (?, ?)",
+            (run_id, tenant_id),
+        )
+
+    def get_run_tenant(self, run_id: str) -> str:
+        """Return the owning tenant for a run, defaulting legacy rows safely."""
+        row = self._get_conn().execute(
+            "SELECT tenant_id FROM run_tenants WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        return str(row["tenant_id"]) if row is not None else "default"
 
     # ------------------------------------------------------------------
     # Run operations
@@ -426,6 +479,55 @@ class SQLiteDatabase:
         )
         return cursor.rowcount > 0
 
+    def rotate_api_key(
+        self, key_id: str, new_key_hash: str
+    ) -> dict[str, Any] | None:
+        """Revoke one key and insert its replacement in one transaction."""
+        conn = self._get_conn()
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            old = conn.execute(
+                "SELECT * FROM api_keys WHERE key_id = ? AND revoked_at IS NULL",
+                (key_id,),
+            ).fetchone()
+            if old is None:
+                conn.execute("ROLLBACK")
+                return None
+            now = _now()
+            new_key_id = f"key-{uuid.uuid4().hex}"
+            conn.execute(
+                "UPDATE api_keys SET revoked_at = ? WHERE key_id = ?",
+                (now, key_id),
+            )
+            conn.execute(
+                """
+                INSERT INTO api_keys (
+                    key_id, key_hash, name, role, created_at,
+                    rate_limit_rate, rate_limit_burst, tenant_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_key_id,
+                    new_key_hash,
+                    old["name"],
+                    old["role"],
+                    now,
+                    old["rate_limit_rate"],
+                    old["rate_limit_burst"],
+                    old["tenant_id"],
+                ),
+            )
+            conn.execute("COMMIT")
+        except sqlite3.Error:
+            conn.execute("ROLLBACK")
+            raise
+        return {
+            "key_id": new_key_id,
+            "name": old["name"],
+            "role": old["role"],
+            "tenant_id": old["tenant_id"],
+        }
+
     def update_last_used(self, key_id: str) -> None:
         """Update last_used_at timestamp."""
         conn = self._get_conn()
@@ -628,6 +730,7 @@ class SQLiteDatabase:
             dst.close()
             src.close()
 
+        self._restrict_file_permissions(dest)
         return str(dest)
 
     def restore(self, backup_path: str) -> None:
@@ -663,6 +766,7 @@ class SQLiteDatabase:
         dest = Path(export_path)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(json.dumps(data, ensure_ascii=False, default=str), encoding="utf-8")
+        self._restrict_file_permissions(dest)
         return str(dest)
 
     # ------------------------------------------------------------------

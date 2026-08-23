@@ -5,6 +5,37 @@ All notable changes to NoeRelay will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Architecture
+
+- Establish Rust as the trusted policy, routing, budget, verification, ledger, and release-authority boundary.
+- Add a compiling Rust OpenAI-compatible gateway with explicit OpenRouter model routing and a development-only stub plane.
+- Add PyO3 bindings over the Rust authority functions instead of duplicating policy in Python.
+- Add an authenticated Go A2A v1.0 adapter using the official A2A SDK; the adapter owns no routing or release decisions.
+- Add the authoritative requirements catalog, verification matrix, and Rust authority ADR.
+- Add transactional PostgreSQL authority snapshots, append-only scoped ledger storage, usage rollups, and restart-safe signed receipts.
+- Add Ed25519 receipt signing and offline verification, contract-bound context manifests, fail-closed high-risk release gates, and governance traceability checks.
+- Add digest-pinned Rust and Go container builds plus PostgreSQL-backed deployment examples.
+- Upgrade PyO3 to the advisory-fixed 0.29 line, build the A2A adapter with Go 1.26.6, and gate CI on RustSec and Go vulnerability scans.
+
+### Security
+
+- Enforce API-key authentication automatically on non-loopback listeners and fail startup when no key is configured.
+- Wire authentication, role checks, per-key rate limits, tenant identity, audit records, exact-origin CORS, request-size limits, and security headers through the real HTTP boundary.
+- Isolate cached responses, runs, receipts, traces, and ledger reads by authenticated tenant.
+- Replace unauthenticated XOR secret storage with versioned authenticated encryption, tamper detection, explicit master-key configuration, and transactional key rotation while retaining legacy read support for migration.
+- Reject private, loopback, link-local, credential-bearing, and malformed webhook targets by default; redact webhook secrets from API responses.
+- Restrict import and restore paths to the database directory and create sensitive database artifacts with restrictive permissions where supported.
+
+### Changed
+
+- Bound run, alert, audit-delivery, SIEM, webhook, and cache retention to prevent unbounded process growth.
+- Validate compatibility parameters, finite numeric values, and upstream passthrough fields more strictly.
+- Close worker-thread SQLite connections and webhook responses deterministically and avoid a signal-thread shutdown deadlock.
+- Harden Docker and Kubernetes defaults, including non-root/read-only execution, explicit secrets, authenticated metrics, egress restrictions, and a one-replica SQLite limit.
+- Add five-minute quick-start and production-deployment guides and correct the Open WebUI network/authentication instructions.
+
 ## [0.1.0-draft] — 2026-08-20
 
 ### Added
@@ -79,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kill switch infrastructure (per tenant, project, model, provider)
 
 #### Testing
-- 1057 tests across 18 test files, all passing
+- 1068 tests across 18 test files, all passing
 - Core gateway pipeline tests (242 tests)
 - Governance and policy tests (93 tests)
 - Compression tests (83 tests)
@@ -141,7 +172,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known Limitations (Reference Kernel)
 
-- All state is in-memory (runs, claims, ledger, memory, registry lost on restart)
+- Some runtime state is in memory; configured SQLite persistence covers operational records but is not a horizontally scalable database
 - No PostgreSQL persistence (planned for Go production phase)
 - No Go production control plane (Python is conformance oracle)
 - No protobuf contract lineage

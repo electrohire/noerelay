@@ -1,0 +1,13 @@
+{
+  "selected_candidate_id": "candidate-1",
+  "selected_openrouter_model_id": "anthropic/claude-sonnet-4",
+  "expected_total_cost_microusd": 1500,
+  "rejections": [
+    {
+      "candidate_id": "candidate-2",
+      "reasons": [
+        "cost_cap"
+      ]
+    }
+  ]
+}

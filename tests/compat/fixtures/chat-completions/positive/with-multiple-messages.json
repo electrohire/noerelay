@@ -1,0 +1,13 @@
+{
+  "model": "openai/gpt-4o-mini",
+  "messages": [
+    {"role": "system", "content": "Be concise."},
+    {"role": "user", "content": "Hello"},
+    {"role": "assistant", "content": "Hi."},
+    {"role": "user", "content": "Continue"}
+  ],
+  "temperature": 0.2,
+  "max_completion_tokens": 64,
+  "top_p": 0.9,
+  "metadata": {"suite": "compat"}
+}

@@ -23,7 +23,7 @@ from gateway.tenancy import TenantManager
 from gateway.audit import AuditLogger
 from gateway.cost_controls import CostController
 from gateway.alerting import AlertManager
-from gateway.webhooks import WebhookManager
+from gateway.webhooks import WebhookManager, validate_webhook_destination
 from gateway.config_manager import ConfigManager
 from gateway.secrets import SecretManager
 
@@ -113,9 +113,9 @@ class RBACTests(unittest.TestCase):
         allowed, _ = self.rbac.check_permission("GET", "/health", "viewer")
         self.assertTrue(allowed)
 
-    def test_unknown_route_no_permission_required(self):
+    def test_unknown_route_is_denied_to_non_admin(self):
         allowed, _ = self.rbac.check_permission("GET", "/unknown/route", "viewer")
-        self.assertTrue(allowed)
+        self.assertFalse(allowed)
 
     def test_operator_can_chat(self):
         allowed, _ = self.rbac.check_permission("POST", "/v1/chat/completions", "operator")
@@ -470,7 +470,7 @@ class AlertingTests(unittest.TestCase):
 class WebhookTests(unittest.TestCase):
     def setUp(self):
         self.db, self.db_path = _temp_db()
-        self.wm = WebhookManager(self.db)
+        self.wm = WebhookManager(self.db, allow_private_networks=True)
 
     def tearDown(self):
         self.db.close()
@@ -488,7 +488,13 @@ class WebhookTests(unittest.TestCase):
 
     def test_register_webhook_with_secret(self):
         wh = self.wm.register("http://example.com/hook", ["run.completed"], secret="my-secret")
-        self.assertEqual(wh["secret"], "my-secret")
+        self.assertNotIn("secret", wh)
+        self.assertTrue(wh["has_secret"])
+
+    def test_private_webhook_is_blocked_by_default(self):
+        manager = WebhookManager(self.db)
+        with self.assertRaises(ValueError):
+            manager.register("http://127.0.0.1/hook", ["run.completed"])
 
     def test_register_webhook_with_tenant(self):
         wh = self.wm.register("http://example.com/hook", ["run.completed"], tenant_id="t1")
@@ -518,7 +524,7 @@ class WebhookTests(unittest.TestCase):
         results = self.wm.deliver("run.completed", {"run_id": "r1"})
         self.assertEqual(len(results), 0)
 
-    @patch("urllib.request.urlopen")
+    @patch("gateway.webhooks.open_webhook_request")
     def test_deliver_matching_webhook(self, mock_urlopen):
         """Webhook delivery succeeds when the target responds."""
         mock_resp = MagicMock()
@@ -533,7 +539,7 @@ class WebhookTests(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertTrue(results[0]["success"])
 
-    @patch("urllib.request.urlopen")
+    @patch("gateway.webhooks.open_webhook_request")
     def test_deliver_matching_webhook_failure(self, mock_urlopen):
         """Webhook delivery records failure when target is unreachable."""
         mock_urlopen.side_effect = OSError("Connection refused")
@@ -544,7 +550,7 @@ class WebhookTests(unittest.TestCase):
         self.assertFalse(results[0]["success"])
         self.assertIsNotNone(results[0]["error"])
 
-    @patch("urllib.request.urlopen")
+    @patch("gateway.webhooks.open_webhook_request")
     def test_deliver_includes_signature_header(self, mock_urlopen):
         """Webhook delivery includes HMAC signature when secret is set."""
         mock_resp = MagicMock()
@@ -568,7 +574,7 @@ class WebhookTests(unittest.TestCase):
         self.assertIsNotNone(sig)
         self.assertEqual(len(sig), 64)
 
-    @patch("urllib.request.urlopen")
+    @patch("gateway.webhooks.open_webhook_request")
     def test_deliver_event_header(self, mock_urlopen):
         """Webhook delivery includes X-NoeRelay-Event header."""
         mock_resp = MagicMock()
@@ -593,6 +599,24 @@ class WebhookTests(unittest.TestCase):
         sig = self.wm._sign_payload("test payload", "secret")
         self.assertIsInstance(sig, str)
         self.assertEqual(len(sig), 64)  # SHA-256 hex digest
+
+    @patch("gateway.webhooks.socket.getaddrinfo")
+    def test_resolved_private_webhook_destination_is_blocked(self, getaddrinfo):
+        getaddrinfo.return_value = [
+            (2, 1, 6, "", ("127.0.0.1", 443)),
+        ]
+        with self.assertRaisesRegex(ValueError, "private or local"):
+            validate_webhook_destination("https://public-name.example/hook")
+
+    @patch("gateway.webhooks.socket.getaddrinfo")
+    def test_resolved_public_webhook_destination_is_allowed(self, getaddrinfo):
+        getaddrinfo.return_value = [
+            (2, 1, 6, "", ("93.184.216.34", 443)),
+        ]
+        self.assertEqual(
+            validate_webhook_destination("https://example.com/hook"),
+            "https://example.com/hook",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -679,7 +703,7 @@ class ConfigManagerTests(unittest.TestCase):
 class SecretManagerTests(unittest.TestCase):
     def setUp(self):
         self.db, self.db_path = _temp_db()
-        self.sm = SecretManager(self.db)
+        self.sm = SecretManager(self.db, master_key="unit-test-master-key")
 
     def tearDown(self):
         self.db.close()
@@ -751,6 +775,14 @@ class SecretManagerTests(unittest.TestCase):
         self.assertNotEqual(encrypted, "hello world")
         decrypted = self.sm._decrypt(encrypted)
         self.assertEqual(decrypted, "hello world")
+
+    def test_tampered_ciphertext_is_rejected(self):
+        from gateway.secrets import SecretIntegrityError
+
+        encrypted = self.sm._encrypt("hello world")
+        replacement = "A" if encrypted[-1] != "A" else "B"
+        with self.assertRaises(SecretIntegrityError):
+            self.sm._decrypt(encrypted[:-1] + replacement)
 
 
 if __name__ == "__main__":

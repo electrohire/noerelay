@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ModelObservation",
+  "type": "object",
+  "required": [
+    "accepted",
+    "candidate_id",
+    "cohort",
+    "cost_microusd",
+    "latency_ms",
+    "observed_at_unix_ms"
+  ],
+  "properties": {
+    "accepted": {
+      "type": "boolean"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "cohort": {
+      "type": "string"
+    },
+    "cost_microusd": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "latency_ms": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "observed_at_unix_ms": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+{
+  "tool_id": "deploy",
+  "revision": "1",
+  "allowed_organizations": [],
+  "allowed_projects": [],
+  "maximum_data_class": "confidential",
+  "side_effecting": true,
+  "allowed_egress_hosts": [
+    "api.example.invalid"
+  ],
+  "maximum_input_bytes": 10000,
+  "maximum_output_bytes": 50000
+}

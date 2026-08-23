@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NodeKind",
+  "type": "string",
+  "enum": [
+    "requirement",
+    "decision",
+    "contradiction",
+    "approval",
+    "evidence_handle",
+    "tool_state",
+    "observation",
+    "conversation",
+    "summary"
+  ]
+}

@@ -1,49 +1,74 @@
-version: '3.8'
-
 services:
   noerelay:
     build: .
     ports:
-      - "8080:8080"
-    volumes:
-      - noerelay-data:/data
-      - ./reference:/app/reference
-      - ./spec:/app/spec
-      - ./examples:/app/examples
+      - "${NOERELAY_PORT:-8080}:8080"
     environment:
-      - NOERELAY_OPENROUTER_MODE=stub
-      - NOERELAY_DATABASE_ENABLED=1
-      - NOERELAY_DATABASE_PATH=/data/noerelay.db
-      - NOERELAY_LOG_LEVEL=INFO
-      - NOERELAY_LOG_OUTPUT=stdout
-      - NOERELAY_CACHE_ENABLED=1
-      - NOERELAY_TLS_ENABLED=0
-      # Secrets (set in .env or Docker secrets)
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - HF_TOKEN=${HF_TOKEN:-}
+      NOERELAY_API_KEY: ${NOERELAY_API_KEY:-noerelay-local-development-key-0001}
+      NOERELAY_OPENROUTER_MODE: ${NOERELAY_OPENROUTER_MODE:-stub}
+      NOERELAY_ORGANIZATION_ID: ${NOERELAY_ORGANIZATION_ID:-local-org}
+      NOERELAY_PROJECT_ID: ${NOERELAY_PROJECT_ID:-local-project}
+      NOERELAY_ENVIRONMENT_ID: ${NOERELAY_ENVIRONMENT_ID:-development}
+      NOERELAY_CANDIDATES_JSON: '${NOERELAY_CANDIDATES_JSON:-[{"candidate_id":"stub","openrouter_model_id":"anthropic/claude-test","provider":"anthropic","available":true,"capabilities":["text"],"maximum_data_class":"confidential","cost":{"inference_microusd":1,"tools_microusd":0,"verification_microusd":0,"expected_retry_microusd":0,"expected_fallback_microusd":0,"infrastructure_microusd":0,"expected_human_review_microusd":0},"latency_p95_ms":1,"acceptance_lcb_ppm":999999,"supports_independent_verification":true}]}'
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      NOERELAY_BUDGET_LIMIT_MICROUSD: ${NOERELAY_BUDGET_LIMIT_MICROUSD:-10000000000}
+      NOERELAY_CONTEXT_BUDGET_TOKENS: ${NOERELAY_CONTEXT_BUDGET_TOKENS:-32768}
+      NOERELAY_RECEIPT_SIGNING_SEED_HEX: ${NOERELAY_RECEIPT_SIGNING_SEED_HEX:-0000000000000000000000000000000000000000000000000000000000000000}
+      NOERELAY_RECEIPT_SIGNING_KEY_ID: ${NOERELAY_RECEIPT_SIGNING_KEY_ID:-local-development-key}
+      DATABASE_URL: postgresql://noerelay:${NOERELAY_POSTGRES_PASSWORD:-noerelay-local-db-password}@postgres:5432/noerelay
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/ready"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     restart: unless-stopped
 
+  postgres:
+    image: postgres:17-bookworm@sha256:84560e3b9c6874893fc4e2854f5dc3e7c1a37bc9d1dfd7a8c641310ae22ba5ad
+    environment:
+      POSTGRES_USER: noerelay
+      POSTGRES_PASSWORD: ${NOERELAY_POSTGRES_PASSWORD:-noerelay-local-db-password}
+      POSTGRES_DB: noerelay
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noerelay -d noerelay"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  a2a-adapter:
+    profiles: ["a2a"]
+    build: ./services/a2a-adapter
+    ports:
+      - "${NOERELAY_A2A_PORT:-8090}:8090"
+    environment:
+      NOERELAY_A2A_LISTEN: 0.0.0.0:8090
+      NOERELAY_A2A_EXTERNAL_BASE_URL: ${NOERELAY_A2A_EXTERNAL_BASE_URL:-http://127.0.0.1:8090}
+      NOERELAY_INTERNAL_URL: http://noerelay:8080
+      NOERELAY_API_KEY: ${NOERELAY_API_KEY:-noerelay-local-development-key-0001}
+      NOERELAY_A2A_BEARER_KEY: ${NOERELAY_A2A_BEARER_KEY:-noerelay-a2a-local-development-key}
+      NOERELAY_A2A_PRINCIPAL_ID: ${NOERELAY_A2A_PRINCIPAL_ID:-a2a-adapter}
+    depends_on:
+      noerelay:
+        condition: service_healthy
+    restart: unless-stopped
+
   ollama:
+    profiles: ["local-models"]
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
     volumes:
       - ollama-models:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     restart: unless-stopped
 
 volumes:
-  noerelay-data:
+  postgres-data:
   ollama-models:

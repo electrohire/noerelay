@@ -8,9 +8,15 @@ Keys are returned in plaintext only at creation time (prefix 'noerelay-').
 from __future__ import annotations
 
 import hashlib
+import math
+import re
 import secrets
-import uuid
 from typing import Any
+
+from .rbac import Role
+
+
+_SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 class APIKeyManager:
@@ -32,6 +38,27 @@ class APIKeyManager:
         tenant_id: str = "default",
     ) -> dict[str, Any]:
         """Create a new API key. Returns {key_id, key (plaintext, shown once), name, role}."""
+        if not isinstance(name, str) or not name.strip() or len(name) > 128:
+            raise ValueError("name must be a non-empty string of at most 128 characters")
+        try:
+            Role(role)
+        except (TypeError, ValueError):
+            raise ValueError("role must be one of admin, operator, auditor, developer, viewer") from None
+        if (
+            isinstance(rate_limit_rate, bool)
+            or not isinstance(rate_limit_rate, (int, float))
+            or not math.isfinite(float(rate_limit_rate))
+            or float(rate_limit_rate) < 0
+        ):
+            raise ValueError("rate_limit_rate must be a finite non-negative number")
+        if (
+            isinstance(rate_limit_burst, bool)
+            or not isinstance(rate_limit_burst, int)
+            or not 1 <= rate_limit_burst <= 1_000_000
+        ):
+            raise ValueError("rate_limit_burst must be an integer from 1 to 1000000")
+        if not isinstance(tenant_id, str) or not _SAFE_IDENTIFIER.fullmatch(tenant_id):
+            raise ValueError("tenant_id contains unsupported characters")
         raw_key = "noerelay-" + secrets.token_urlsafe(32)
         key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
         key_id = self._db.create_api_key(
@@ -62,16 +89,10 @@ class APIKeyManager:
         return self._db.revoke_api_key(key_id)
 
     def rotate_key(self, key_id: str) -> dict[str, Any]:
-        """Rotate an API key. Revokes old key, creates new one."""
-        keys = self._db.list_api_keys()
-        old_key = next((k for k in keys if k["key_id"] == key_id), None)
-        if not old_key:
+        """Rotate an API key atomically and return the new plaintext once."""
+        raw_key = "noerelay-" + secrets.token_urlsafe(32)
+        key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+        rotated = self._db.rotate_api_key(key_id, key_hash)
+        if rotated is None:
             raise ValueError(f"key {key_id} not found")
-        self.revoke_key(key_id)
-        return self.create_key(
-            name=old_key["name"],
-            role=old_key["role"],
-            rate_limit_rate=old_key.get("rate_limit_rate", 10.0),
-            rate_limit_burst=old_key.get("rate_limit_burst", 20),
-            tenant_id=old_key.get("tenant_id", "default"),
-        )
+        return {**rotated, "key": raw_key}

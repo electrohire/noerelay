@@ -2,13 +2,17 @@
 
 **Version:** 0.1.0-draft
 **Last updated:** 2026-08-20
-**Status:** Initial draft — covers the Python reference kernel scope
+**Status:** Legacy reference-kernel model; Rust authority delta in Section 1.1
 
 ---
 
 ## 1. Scope
 
-This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as deployed per the [deployment guide](deployment.md). It does not cover the planned Go production control plane, PostgreSQL persistence, A2A/MCP protocols, or tool sandbox — those will be modeled separately when their implementations begin.
+This threat model originally covered the Python reference kernel. ADR-0001 now assigns release authority to Rust. Its existing findings remain useful for the legacy oracle, but it is not release-complete until the Rust gateway/core, PostgreSQL persistence, A2A/MCP adapters, and tool sandbox receive independent review.
+
+### 1.1 Rust authority delta
+
+The Rust boundary now includes canonical request scope, task-contract hashing, constraint-first model selection, budget reservation, tool authorization, four-valued claims, protected context manifests, verification DAG decisions, usage rollups, recommendation uncertainty, and hash-chain verification. New risks include cross-language canonicalization drift, binding privilege confusion, adapter-to-core authorization, async cancellation, stream truncation, registry/config authenticity, and persistence transaction boundaries. The release tests for these risks are normative in [`verification-matrix.md`](verification-matrix.md).
 
 ### In scope
 
@@ -25,7 +29,7 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 
 ### Out of scope (future phases)
 
-- Go production control plane
+- Durable Rust production persistence and worker plane
 - PostgreSQL persistence
 - A2A agent interoperability
 - MCP tool integration
@@ -86,11 +90,12 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 
 | Asset | Sensitivity | Storage | Protection |
 |---|---|---|---|
-| API keys | High | SQLite / config | Hashed at rest (future); never logged |
+| API keys | High | SQLite / process configuration | Database-managed keys are SHA-256 hashed; plaintext environment keys are process secrets; neither is logged |
 | OpenRouter API key | Critical | Environment variable | Never logged; masked in errors |
 | Run data (inputs, outputs, costs) | Medium | SQLite / in-memory | Tenant-scoped access |
 | Evidence receipts | Medium | SQLite / in-memory | Hash-linked integrity |
 | Epistemic claims | Medium | In-memory | Immutable ledger |
+| Managed secrets | Critical | SQLite | Versioned authenticated encryption; master key held separately |
 | Governance policies | High | File system | Read-only after load |
 | Portfolio configuration | High | File system | Read-only after load |
 | Hugging Face token | Critical | Environment variable | Never logged; masked in errors |
@@ -120,7 +125,7 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 - Default bind address is `127.0.0.1` (loopback only)
 - Health endpoint (`GET /health`) is intentionally unauthenticated
 
-**Residual risk:** Low. Auth is disabled by default for local development but must be enabled in production.
+**Residual risk:** Low for the default network posture. Auth may be disabled only on a loopback listener unless an operator explicitly overrides the requirement; non-loopback startup without keys fails closed.
 
 ### T2: API Key Exposure in Logs
 
@@ -139,12 +144,12 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 **Threat:** Tenant A accesses Tenant B's runs, keys, or configuration.
 
 **Mitigation:**
-- All run queries are scoped to the authenticated tenant
+- Compatibility run, receipt, trace, ledger, and response-cache access is scoped to the authenticated tenant
 - API key management is tenant-scoped
 - RBAC checks verify tenant ownership before data access
 - Negative tests verify cross-tenant isolation
 
-**Residual risk:** Medium. The reference implementation uses in-memory state; cross-tenant isolation depends on correct tenant scoping in every handler. The Go production implementation will add database-level row-level security.
+**Residual risk:** Medium. The reference implementation has no database-level row security, so isolation still depends on handler and query correctness. Administrative analytics are intentionally privileged rather than tenant self-service.
 
 ### T4: Model Output Injection
 
@@ -166,7 +171,8 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 **Mitigation:**
 - Token-bucket rate limiting per API key
 - Quota/budget enforcement per tenant (daily/monthly)
-- Request timeout configuration
+- A configurable maximum JSON request-body size
+- Bounded in-memory runs, alerts, webhooks, SIEM records, and caches
 - Graceful shutdown with request draining
 - K8s resource limits (CPU, memory)
 
@@ -193,7 +199,7 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 - Evidence receipts bind inputs, route, artifacts, verification, cost, claims, and ledger head
 - Tampering is detectable through hash verification
 
-**Residual risk:** Low for integrity detection. The reference implementation is in-memory; the Go production implementation will add PostgreSQL immutable event tables and periodic signed checkpoints.
+**Residual risk:** Low for integrity detection, but a local attacker who can modify both records and all downstream receipts can recompute an unsigned chain. External signed checkpoints are not implemented.
 
 ### T8: Configuration Tampering
 
@@ -217,6 +223,8 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 - K8s secrets are mounted as files or env vars with `secretKeyRef`
 
 **Residual risk:** Low. Environment variable exposure is a platform concern; the application does not intentionally expose them.
+
+Managed application secrets stored through the API use versioned authenticated encryption with a required master key. Ciphertext tampering fails closed, list operations never return secret values, and key rotation is transactional. The master key remains a critical deployment secret and must be backed up separately from SQLite.
 
 ### T10: Dependency Supply Chain
 
@@ -246,7 +254,10 @@ This threat model covers the NoeRelay Python reference kernel (`0.1.0-draft`) as
 | Health endpoint (no auth) | ✅ Implemented | K8s probe compatible |
 | TLS support | ⚠️ Optional | Requires manual cert provisioning |
 | OIDC/OAuth | ❌ Not implemented | Planned for Go production phase |
-| Key hashing at rest | ❌ Not implemented | Planned for Go production phase |
+| API-key hashing at rest | ✅ Implemented | Database-managed keys stored as SHA-256 digests |
+| Managed-secret encryption | ✅ Implemented | Encrypt-then-MAC with explicit master key |
+| Exact-origin CORS | ✅ Implemented | Explicit allowlist; wildcard rejected |
+| Request body limit | ✅ Implemented | Configurable; 4 MiB default |
 | Container vulnerability scanning | ❌ Not implemented | Planned for CI enhancement |
 | SBOM generation | ❌ Not implemented | Planned for CI enhancement |
 | Distributed tracing | ❌ Not implemented | Planned for Go production phase |

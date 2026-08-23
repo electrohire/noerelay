@@ -21,6 +21,7 @@ import uuid
 from collections import deque
 from datetime import datetime, timezone
 from enum import Enum
+from collections.abc import Iterator
 from typing import Any
 
 from epr.memory import validate_context_capsule
@@ -330,7 +331,7 @@ class ContextCompiler:
                 return True
         return False
 
-    def _flatten(self, value: Any):
+    def _flatten(self, value: Any) -> Iterator[Any]:
         if isinstance(value, dict):
             for item in value.values():
                 yield from self._flatten(item)

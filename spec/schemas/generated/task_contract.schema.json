@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TaskContract",
+  "type": "object",
+  "required": [
+    "acceptance_criteria",
+    "allowed_agents",
+    "allowed_tools",
+    "contract_hash",
+    "contract_version",
+    "outcome",
+    "request_id",
+    "required_capabilities",
+    "requires_human_approval",
+    "requires_independent_verifier",
+    "risk"
+  ],
+  "properties": {
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowed_agents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "context_manifest_hash": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "contract_hash": {
+      "type": "string"
+    },
+    "contract_version": {
+      "type": "string"
+    },
+    "max_cost_microusd": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "max_latency_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "outcome": {
+      "type": "string"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "requires_human_approval": {
+      "type": "boolean"
+    },
+    "requires_independent_verifier": {
+      "type": "boolean"
+    },
+    "risk": {
+      "$ref": "#/definitions/RiskClass"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "RiskClass": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    }
+  }
+}

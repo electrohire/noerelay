@@ -1,0 +1,23 @@
+[package]
+name = "xtask"
+description = "NoeRelay schema generation, golden vector tests, and build automation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+noerelay-core = { path = "../crates/noerelay-core" }
+schemars.workspace = true
+serde_json.workspace = true
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+chrono.workspace = true
+hex.workspace = true
+serde = { version = "1", features = ["derive"] }
+sha2.workspace = true
+uuid.workspace = true
+base64.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

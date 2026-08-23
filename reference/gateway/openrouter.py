@@ -22,7 +22,14 @@ from .config import ConfigError, GatewayConfig
 
 _PASSTHROUGH_FIELDS = (
     "temperature",
+    "top_p",
     "max_tokens",
+    "stop",
+    "n",
+    "presence_penalty",
+    "frequency_penalty",
+    "logit_bias",
+    "user",
     "tools",
     "tool_choice",
     "response_format",

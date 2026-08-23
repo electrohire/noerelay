@@ -16,7 +16,7 @@
 #
 # Environment variables:
 #   NOERELAY_BASE_URL  — NoeRelay base URL (default: http://127.0.0.1:8080)
-#   NOERELAY_API_KEY   — NoeRelay API key (default: any-value)
+#   NOERELAY_API_KEY   — NoeRelay API key (default: noerelay, Compose dev key)
 #   NOERELAY_MODEL     — Model ID to use (default: noerelay/epr-1)
 # =============================================================================
 
@@ -26,8 +26,23 @@ set -euo pipefail
 # Configuration
 # ---------------------------------------------------------------------------
 BASE_URL="${NOERELAY_BASE_URL:-http://127.0.0.1:8080}"
-API_KEY="${NOERELAY_API_KEY:-any-value}"
+API_KEY="${NOERELAY_API_KEY:-noerelay}"
 MODEL="${NOERELAY_MODEL:-noerelay/epr-1}"
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/noerelay-smoke.XXXXXX")
+SCRIPT_BASHPID=$BASHPID
+cleanup() {
+    if [ "$BASHPID" -eq "$SCRIPT_BASHPID" ]; then
+        rm -rf -- "$TEMP_DIR"
+    fi
+}
+trap cleanup EXIT HUP INT TERM
+HEALTH_FILE="$TEMP_DIR/health.json"
+MODELS_FILE="$TEMP_DIR/models.json"
+CHAT_FILE="$TEMP_DIR/chat.json"
+STREAM_FILE="$TEMP_DIR/stream.txt"
+ERROR_FILE="$TEMP_DIR/error.json"
+ERROR2_FILE="$TEMP_DIR/error2.json"
+GOV_FILE="$TEMP_DIR/governance.json"
 
 # Colors for output
 RED='\033[0;31m'
@@ -73,12 +88,15 @@ check_prereqs() {
 
     # Check if python is available for JSON formatting
     if command -v python3 &> /dev/null; then
+        PYTHON_BIN="python3"
         JSON_PRETTY="python3 -m json.tool"
         pass_test "python3 available for JSON formatting"
     elif command -v python &> /dev/null; then
+        PYTHON_BIN="python"
         JSON_PRETTY="python -m json.tool"
         pass_test "python available for JSON formatting"
     else
+        PYTHON_BIN=""
         JSON_PRETTY="cat"
         echo -e "${YELLOW}⚠️  python not found — JSON output will not be formatted${NC}"
     fi
@@ -90,13 +108,14 @@ check_prereqs() {
 test_health() {
     section "Test 1: Health Check"
 
-    HTTP_CODE=$(curl -s -o /tmp/noerelay-health.json -w "%{http_code}" \
+    HTTP_CODE=$(curl -s -o "$HEALTH_FILE" -w "%{http_code}" \
         --connect-timeout 5 \
-        "$BASE_URL/health" 2>/dev/null || echo "000")
+        "$BASE_URL/health" 2>/dev/null || true)
+    HTTP_CODE="${HTTP_CODE:-000}"
 
     if [ "$HTTP_CODE" = "200" ]; then
         pass_test "Health endpoint returned 200"
-        echo "   Response: $(cat /tmp/noerelay-health.json | $JSON_PRETTY)"
+        echo "   Response: $($JSON_PRETTY < "$HEALTH_FILE")"
     else
         fail_test "Health endpoint returned $HTTP_CODE (expected 200)"
         echo "   Is NoeRelay running at $BASE_URL?"
@@ -111,17 +130,19 @@ test_health() {
 test_list_models() {
     section "Test 2: List Models"
 
-    HTTP_CODE=$(curl -s -o /tmp/noerelay-models.json -w "%{http_code}" \
+    HTTP_CODE=$(curl -s -o "$MODELS_FILE" -w "%{http_code}" \
         --connect-timeout 5 \
-        "$BASE_URL/v1/models" 2>/dev/null || echo "000")
+        -H "Authorization: Bearer $API_KEY" \
+        "$BASE_URL/v1/models" 2>/dev/null || true)
+    HTTP_CODE="${HTTP_CODE:-000}"
 
     if [ "$HTTP_CODE" = "200" ]; then
         pass_test "Models endpoint returned 200"
         echo "   Response:"
-        cat /tmp/noerelay-models.json | $JSON_PRETTY
+        $JSON_PRETTY < "$MODELS_FILE"
 
         # Check if expected model is in the list
-        if grep -q "$MODEL" /tmp/noerelay-models.json 2>/dev/null; then
+        if grep -q "$MODEL" "$MODELS_FILE" 2>/dev/null; then
             pass_test "Expected model '$MODEL' found in model list"
         else
             echo -e "${YELLOW}   ⚠️  Expected model '$MODEL' not found in list${NC}"
@@ -137,7 +158,7 @@ test_list_models() {
 test_chat_completion() {
     section "Test 3: Non-Streaming Chat Completion"
 
-    HTTP_CODE=$(curl -s -o /tmp/noerelay-chat.json -w "%{http_code}" \
+    HTTP_CODE=$(curl -s -o "$CHAT_FILE" -w "%{http_code}" \
         --connect-timeout 10 \
         --max-time 30 \
         -X POST "$BASE_URL/v1/chat/completions" \
@@ -151,27 +172,34 @@ test_chat_completion() {
             ],
             \"temperature\": 0.7,
             \"max_tokens\": 100
-        }" 2>/dev/null || echo "000")
+        }" 2>/dev/null || true)
+    HTTP_CODE="${HTTP_CODE:-000}"
 
     if [ "$HTTP_CODE" = "200" ]; then
         pass_test "Chat completion returned 200"
         echo "   Response:"
-        cat /tmp/noerelay-chat.json | $JSON_PRETTY
+        $JSON_PRETTY < "$CHAT_FILE"
 
         # Extract and display the content
-        CONTENT=$(python3 -c "
+        if [ -n "$PYTHON_BIN" ]; then
+            CONTENT=$(NOERELAY_RESPONSE_FILE="$CHAT_FILE" "$PYTHON_BIN" -c "
 import json, sys
+import os
 try:
-    data = json.load(open('/tmp/noerelay-chat.json'))
+    with open(os.environ['NOERELAY_RESPONSE_FILE'], encoding='utf-8') as response_file:
+        data = json.load(response_file)
     print(data['choices'][0]['message']['content'])
-except:
+except (KeyError, OSError, TypeError, ValueError):
     print('[could not parse]')
 " 2>/dev/null || echo "[parse error]")
+        else
+            CONTENT="[python unavailable]"
+        fi
         echo ""
         echo "   Content: $CONTENT"
 
         # Check for EPR metadata
-        if grep -q '"epr"' /tmp/noerelay-chat.json 2>/dev/null; then
+        if grep -q '"epr"' "$CHAT_FILE" 2>/dev/null; then
             pass_test "EPR metadata present in response"
         else
             echo -e "${YELLOW}   ⚠️  No EPR metadata found in response${NC}"
@@ -179,7 +207,7 @@ except:
     else
         fail_test "Chat completion returned $HTTP_CODE (expected 200)"
         echo "   Response:"
-        cat /tmp/noerelay-chat.json 2>/dev/null || echo "   [no response body]"
+        cat "$CHAT_FILE" 2>/dev/null || echo "   [no response body]"
     fi
 }
 
@@ -192,7 +220,6 @@ test_streaming() {
     echo "   Sending streaming request..."
 
     # Use a temp file for streaming output
-    STREAM_FILE=/tmp/noerelay-stream.txt
     HTTP_CODE=$(curl -s -o "$STREAM_FILE" -w "%{http_code}" \
         --connect-timeout 10 \
         --max-time 30 \
@@ -206,7 +233,8 @@ test_streaming() {
             ],
             \"stream\": true,
             \"max_tokens\": 100
-        }" 2>/dev/null || echo "000")
+        }" 2>/dev/null || true)
+    HTTP_CODE="${HTTP_CODE:-000}"
 
     if [ "$HTTP_CODE" = "200" ]; then
         pass_test "Streaming returned 200"
@@ -239,7 +267,7 @@ test_error_handling() {
     section "Test 5: Error Handling"
 
     # Test with invalid model
-    HTTP_CODE=$(curl -s -o /tmp/noerelay-error.json -w "%{http_code}" \
+    HTTP_CODE=$(curl -s -o "$ERROR_FILE" -w "%{http_code}" \
         --connect-timeout 5 \
         -X POST "$BASE_URL/v1/chat/completions" \
         -H "Content-Type: application/json" \
@@ -247,25 +275,27 @@ test_error_handling() {
         -d '{
             "model": "nonexistent-model-xyz",
             "messages": [{"role": "user", "content": "Hello"}]
-        }' 2>/dev/null || echo "000")
+        }' 2>/dev/null || true)
+    HTTP_CODE="${HTTP_CODE:-000}"
 
     if [ "$HTTP_CODE" != "200" ]; then
         pass_test "Invalid model returned error code $HTTP_CODE"
         echo "   Response:"
-        cat /tmp/noerelay-error.json | $JSON_PRETTY 2>/dev/null || echo "   [no response body]"
+        $JSON_PRETTY < "$ERROR_FILE" 2>/dev/null || echo "   [no response body]"
     else
         echo -e "${YELLOW}   ⚠️  Invalid model returned 200 (may be OK in stub mode)${NC}"
     fi
 
     # Test with missing required field
-    HTTP_CODE=$(curl -s -o /tmp/noerelay-error2.json -w "%{http_code}" \
+    HTTP_CODE=$(curl -s -o "$ERROR2_FILE" -w "%{http_code}" \
         --connect-timeout 5 \
         -X POST "$BASE_URL/v1/chat/completions" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $API_KEY" \
         -d '{
             "model": "noerelay/epr-1"
-        }' 2>/dev/null || echo "000")
+        }' 2>/dev/null || true)
+    HTTP_CODE="${HTTP_CODE:-000}"
 
     if [ "$HTTP_CODE" != "200" ]; then
         pass_test "Missing messages field returned error code $HTTP_CODE"
@@ -280,7 +310,7 @@ test_error_handling() {
 test_governance() {
     section "Test 6: Governance Parameters"
 
-    HTTP_CODE=$(curl -s -o /tmp/noerelay-gov.json -w "%{http_code}" \
+    HTTP_CODE=$(curl -s -o "$GOV_FILE" -w "%{http_code}" \
         --connect-timeout 10 \
         --max-time 30 \
         -X POST "$BASE_URL/v1/chat/completions" \
@@ -298,7 +328,8 @@ test_governance() {
                 \"max_cost_usd\": 0.25,
                 \"max_latency_ms\": 60000
             }
-        }" 2>/dev/null || echo "000")
+        }" 2>/dev/null || true)
+    HTTP_CODE="${HTTP_CODE:-000}"
 
     if [ "$HTTP_CODE" = "200" ]; then
         pass_test "Governance request returned 200"
@@ -316,7 +347,7 @@ main() {
     echo ""
     echo "Base URL: $BASE_URL"
     echo "Model: $MODEL"
-    echo "API Key: $(if [ "$API_KEY" = "any-value" ]; then echo '[default]'; else echo '[set]'; fi)"
+    echo "API Key: [set; value not displayed]"
 
     check_prereqs
 

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UsageTotals",
+  "type": "object",
+  "required": [
+    "cost_microusd",
+    "input_tokens",
+    "output_tokens"
+  ],
+  "properties": {
+    "cost_microusd": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "input_tokens": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "output_tokens": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  }
+}

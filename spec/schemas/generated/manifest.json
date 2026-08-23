@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.0.0",
+  "types": [
+    {
+      "file": "risk_class.schema.json",
+      "type_name": "noerelay_core::types::RiskClass"
+    },
+    {
+      "file": "data_class.schema.json",
+      "type_name": "noerelay_core::types::DataClass"
+    },
+    {
+      "file": "identity_scope.schema.json",
+      "type_name": "noerelay_core::types::IdentityScope"
+    },
+    {
+      "file": "message_role.schema.json",
+      "type_name": "noerelay_core::types::MessageRole"
+    },
+    {
+      "file": "message.schema.json",
+      "type_name": "noerelay_core::types::Message"
+    },
+    {
+      "file": "canonical_request.schema.json",
+      "type_name": "noerelay_core::types::CanonicalRequest"
+    },
+    {
+      "file": "task_contract.schema.json",
+      "type_name": "noerelay_core::contract::TaskContract"
+    },
+    {
+      "file": "candidate.schema.json",
+      "type_name": "noerelay_core::routing::Candidate"
+    },
+    {
+      "file": "constraints.schema.json",
+      "type_name": "noerelay_core::routing::Constraints"
+    },
+    {
+      "file": "rejection_reason.schema.json",
+      "type_name": "noerelay_core::routing::RejectionReason"
+    },
+    {
+      "file": "candidate_rejection.schema.json",
+      "type_name": "noerelay_core::routing::CandidateRejection"
+    },
+    {
+      "file": "route_decision.schema.json",
+      "type_name": "noerelay_core::routing::RouteDecision"
+    },
+    {
+      "file": "prepared_run.schema.json",
+      "type_name": "noerelay_core::runtime::PreparedRun"
+    },
+    {
+      "file": "run_receipt.schema.json",
+      "type_name": "noerelay_core::runtime::RunReceipt"
+    },
+    {
+      "file": "completion.schema.json",
+      "type_name": "noerelay_core::runtime::Completion"
+    },
+    {
+      "file": "usage_measurement.schema.json",
+      "type_name": "noerelay_core::runtime::UsageMeasurement"
+    },
+    {
+      "file": "governance_snapshot.schema.json",
+      "type_name": "noerelay_core::runtime::GovernanceSnapshot"
+    },
+    {
+      "file": "signed_run_receipt.schema.json",
+      "type_name": "noerelay_core::receipt::SignedRunReceipt"
+    },
+    {
+      "file": "budget_reservation.schema.json",
+      "type_name": "noerelay_core::budget::BudgetReservation"
+    },
+    {
+      "file": "budget_account.schema.json",
+      "type_name": "noerelay_core::budget::BudgetAccount"
+    },
+    {
+      "file": "node_kind.schema.json",
+      "type_name": "noerelay_core::context::NodeKind"
+    },
+    {
+      "file": "context_node.schema.json",
+      "type_name": "noerelay_core::context::ContextNode"
+    },
+    {
+      "file": "context_manifest.schema.json",
+      "type_name": "noerelay_core::context::ContextManifest"
+    },
+    {
+      "file": "epistemic_state.schema.json",
+      "type_name": "noerelay_core::epistemic::EpistemicState"
+    },
+    {
+      "file": "evidence_polarity.schema.json",
+      "type_name": "noerelay_core::epistemic::EvidencePolarity"
+    },
+    {
+      "file": "claim_kind.schema.json",
+      "type_name": "noerelay_core::epistemic::ClaimKind"
+    },
+    {
+      "file": "claim.schema.json",
+      "type_name": "noerelay_core::epistemic::Claim"
+    },
+    {
+      "file": "ledger_event_kind.schema.json",
+      "type_name": "noerelay_core::ledger::LedgerEventKind"
+    },
+    {
+      "file": "ledger_event.schema.json",
+      "type_name": "noerelay_core::ledger::LedgerEvent"
+    },
+    {
+      "file": "ledger.schema.json",
+      "type_name": "noerelay_core::ledger::Ledger"
+    },
+    {
+      "file": "check_kind.schema.json",
+      "type_name": "noerelay_core::verification::CheckKind"
+    },
+    {
+      "file": "verification_check.schema.json",
+      "type_name": "noerelay_core::verification::VerificationCheck"
+    },
+    {
+      "file": "check_status.schema.json",
+      "type_name": "noerelay_core::verification::CheckStatus"
+    },
+    {
+      "file": "check_result.schema.json",
+      "type_name": "noerelay_core::verification::CheckResult"
+    },
+    {
+      "file": "release_outcome.schema.json",
+      "type_name": "noerelay_core::verification::ReleaseOutcome"
+    },
+    {
+      "file": "cost_breakdown.schema.json",
+      "type_name": "noerelay_core::usage::CostBreakdown"
+    },
+    {
+      "file": "usage_dimensions.schema.json",
+      "type_name": "noerelay_core::usage::UsageDimensions"
+    },
+    {
+      "file": "usage_record.schema.json",
+      "type_name": "noerelay_core::usage::UsageRecord"
+    },
+    {
+      "file": "usage_totals.schema.json",
+      "type_name": "noerelay_core::usage::UsageTotals"
+    },
+    {
+      "file": "usage_rollup.schema.json",
+      "type_name": "noerelay_core::usage::UsageRollup"
+    },
+    {
+      "file": "tool_revision.schema.json",
+      "type_name": "noerelay_core::tools::ToolRevision"
+    },
+    {
+      "file": "tool_proposal.schema.json",
+      "type_name": "noerelay_core::tools::ToolProposal"
+    },
+    {
+      "file": "tool_context.schema.json",
+      "type_name": "noerelay_core::tools::ToolContext"
+    },
+    {
+      "file": "tool_decision.schema.json",
+      "type_name": "noerelay_core::tools::ToolDecision"
+    },
+    {
+      "file": "requirement.schema.json",
+      "type_name": "noerelay_core::traceability::Requirement"
+    },
+    {
+      "file": "test_case.schema.json",
+      "type_name": "noerelay_core::traceability::TestCase"
+    },
+    {
+      "file": "evidence_status.schema.json",
+      "type_name": "noerelay_core::traceability::EvidenceStatus"
+    },
+    {
+      "file": "evidence.schema.json",
+      "type_name": "noerelay_core::traceability::Evidence"
+    },
+    {
+      "file": "model_observation.schema.json",
+      "type_name": "noerelay_core::recommendation::ModelObservation"
+    },
+    {
+      "file": "recommendation.schema.json",
+      "type_name": "noerelay_core::recommendation::Recommendation"
+    }
+  ]
+}

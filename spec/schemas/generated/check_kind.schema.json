@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CheckKind",
+  "type": "string",
+  "enum": [
+    "schema",
+    "policy",
+    "deterministic_acceptance",
+    "independent_review",
+    "human_approval"
+  ]
+}

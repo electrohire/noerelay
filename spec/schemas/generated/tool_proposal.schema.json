@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ToolProposal",
+  "type": "object",
+  "required": [
+    "input_bytes",
+    "tool_id"
+  ],
+  "properties": {
+    "idempotency_key": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "input_bytes": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "requested_egress_host": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tool_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

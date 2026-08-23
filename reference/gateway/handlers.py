@@ -8,6 +8,8 @@ contract/routing/execution work.
 from __future__ import annotations
 
 import os
+import math
+from pathlib import Path
 from typing import Any
 
 from .model_lifecycle import (
@@ -23,6 +25,98 @@ from .streaming import SSEStreamer, StreamResponse
 
 _CHAT_HANDLED_KEYS = {"model", "messages", "governance", "stream"}
 _RESPONSES_HANDLED_KEYS = {"model", "input", "instructions", "governance", "stream"}
+
+
+def _validate_chat_parameters(body: dict[str, Any]) -> tuple[str, str] | None:
+    """Validate standard chat-completions parameters accepted by the gateway."""
+    messages = body.get("messages")
+    if not isinstance(messages, list) or not messages:
+        return "messages is required and must be a non-empty array", "messages"
+    for index, message in enumerate(messages):
+        if not isinstance(message, dict):
+            return f"messages[{index}] must be an object", "messages"
+        if not isinstance(message.get("role"), str) or not message.get("role"):
+            return f"messages[{index}].role must be a non-empty string", "messages"
+        content = message.get("content")
+        if content is not None and not isinstance(content, (str, list)):
+            return f"messages[{index}].content must be a string, array, or null", "messages"
+
+    numeric_ranges = {
+        "temperature": (0.0, 2.0),
+        "top_p": (0.0, 1.0),
+        "presence_penalty": (-2.0, 2.0),
+        "frequency_penalty": (-2.0, 2.0),
+    }
+    for name, (minimum, maximum) in numeric_ranges.items():
+        if name not in body:
+            continue
+        value = body[name]
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or not minimum <= value <= maximum
+        ):
+            return f"{name} must be a finite number between {minimum:g} and {maximum:g}", name
+
+    for name in ("max_tokens", "n"):
+        if name in body and (
+            isinstance(body[name], bool)
+            or not isinstance(body[name], int)
+            or body[name] < 1
+        ):
+            return f"{name} must be a positive integer", name
+
+    stop = body.get("stop")
+    if stop is not None and not (
+        isinstance(stop, str)
+        or (
+            isinstance(stop, list)
+            and all(isinstance(item, str) for item in stop)
+        )
+    ):
+        return "stop must be a string or an array of strings", "stop"
+    if "logit_bias" in body and not isinstance(body["logit_bias"], dict):
+        return "logit_bias must be an object", "logit_bias"
+    if "user" in body and not isinstance(body["user"], str):
+        return "user must be a string", "user"
+    if "stream" in body and not isinstance(body["stream"], bool):
+        return "stream must be a boolean", "stream"
+    return None
+
+
+def _managed_database_path(db: Any, path: str | None, default_name: str) -> Path:
+    """Resolve an admin data path without allowing traversal outside the DB directory."""
+    base = Path(db._db_path).resolve().parent  # type: ignore[attr-defined]
+    candidate = Path(path) if path else base / default_name
+    if not candidate.is_absolute():
+        candidate = (Path.cwd() / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    try:
+        candidate.relative_to(base)
+    except ValueError as exc:
+        raise ValueError("path must remain inside the configured database directory") from exc
+    return candidate
+
+
+def _request_tenant(ctx: PipelineContext) -> str:
+    return str(getattr(ctx.request_local, "tenant_id", "default"))
+
+
+def _request_role(ctx: PipelineContext) -> str | None:
+    return getattr(ctx.request_local, "role", None)
+
+
+def _visible_run(ctx: PipelineContext, run_id: str) -> Any | None:
+    """Return a run only when it is visible to the current tenant."""
+    record = ctx.registry.get(run_id)
+    if record is None:
+        return None
+    role = _request_role(ctx)
+    if role in (None, "admin") or record.tenant_id == _request_tenant(ctx):
+        return record
+    return None
 
 
 def _normalize_responses_input(
@@ -84,6 +178,7 @@ def _finish_inference(
     response_format: str,
     stream: bool,
 ) -> tuple[int, dict[str, Any]] | StreamResponse:
+    request["tenant_id"] = _request_tenant(ctx)
     try:
         result = run_inference_pipeline(request, ctx, response_format=response_format)
     except PipelineError as exc:
@@ -115,6 +210,16 @@ def handle_chat_completions(
             "invalid_request_error",
             "messages",
             "missing_field",
+        )
+
+    validation_error = _validate_chat_parameters(body)
+    if validation_error is not None:
+        message, parameter = validation_error
+        return 400, error_envelope(
+            message,
+            "invalid_request_error",
+            parameter,
+            "invalid_parameter",
         )
 
     governance = body.get("governance")
@@ -218,20 +323,54 @@ def handle_responses(
 def handle_get_run(
     run_id: str, ctx: PipelineContext
 ) -> tuple[int, dict[str, Any]]:
-    receipt = ctx.registry.get_receipt(run_id)
-    if receipt is None:
+    record = _visible_run(ctx, run_id)
+    if record is None or record.receipt is None:
         return 404, error_envelope(
             f"run {run_id!r} not found",
             "invalid_request_error",
             "run_id",
             "run_not_found",
         )
-    return 200, receipt
+    return 200, record.receipt
 
 
 def handle_health(ctx: PipelineContext) -> tuple[int, dict[str, Any]]:
-    """Return a lightweight liveness/readiness payload."""
+    """Return a lightweight process-liveness payload."""
     return 200, {"status": "healthy", "version": "0.1.0"}
+
+
+def handle_readiness(ctx: PipelineContext) -> tuple[int, dict[str, Any]]:
+    """Return whether required configuration and persistent state are usable."""
+    checks: dict[str, bool] = {
+        "policy": ctx.config.policy_path.is_file(),
+        "state_machine": ctx.config.state_machine_path.is_file(),
+        "portfolio": ctx.config.portfolio_path.is_file(),
+        "inference": (
+            ctx.config.openrouter_mode == "stub"
+            or bool(ctx.config.openrouter_api_key)
+        ),
+    }
+    db = getattr(ctx.registry, "_db", None)
+    if ctx.config.database_enabled:
+        try:
+            checks["database"] = bool(
+                db is not None
+                and db._get_conn().execute("SELECT 1").fetchone()[0] == 1
+            )
+        except Exception:
+            checks["database"] = False
+    if ctx.config.production_mode:
+        checks["authentication"] = bool(ctx.auth is not None)
+        checks["secret_store"] = bool(ctx.secret_manager is not None)
+        checks["transport_security"] = bool(
+            ctx.config.tls_enabled or ctx.config.trusted_proxy_tls
+        )
+    ready = all(checks.values())
+    return (200 if ready else 503), {
+        "status": "ready" if ready else "not_ready",
+        "version": "0.1.0",
+        "checks": checks,
+    }
 
 
 def handle_cache_stats(ctx: PipelineContext) -> tuple[int, dict[str, Any]]:
@@ -421,7 +560,7 @@ def handle_model_cloud(ctx: PipelineContext) -> tuple[int, dict[str, Any]]:
         models = discovery.list_models()
     except RuntimeError as exc:
         return 502, error_envelope(
-            f"Failed to fetch OpenRouter models: {exc}",
+            "Failed to fetch OpenRouter models",
             "upstream_error",
             None,
             "openrouter_unavailable",
@@ -474,7 +613,7 @@ def handle_get_trace(
     run_id: str, ctx: PipelineContext
 ) -> tuple[int, dict[str, Any]]:
     """Return the full epistemic decision trace for a run."""
-    record = ctx.registry.get(run_id)
+    record = _visible_run(ctx, run_id)
     if record is None:
         return 404, error_envelope(
             f"run {run_id!r} not found",
@@ -502,7 +641,7 @@ def handle_ledger_events(
     events: list[dict[str, Any]] = []
 
     if run_id:
-        record = ctx.registry.get(run_id)
+        record = _visible_run(ctx, run_id)
         if record is None:
             return 404, error_envelope(
                 f"run {run_id!r} not found",
@@ -515,7 +654,8 @@ def handle_ledger_events(
         # Collect events from all runs
         runs = getattr(ctx.registry, "_runs", {})
         for record in runs.values():
-            events.extend(record.events)
+            if _request_role(ctx) in (None, "admin") or record.tenant_id == _request_tenant(ctx):
+                events.extend(record.events)
 
     # Apply filters
     if event_type:
@@ -541,7 +681,7 @@ def handle_ledger_chain(
     run_id: str, ctx: PipelineContext
 ) -> tuple[int, dict[str, Any]]:
     """Get the full hash-linked chain for a run."""
-    record = ctx.registry.get(run_id)
+    record = _visible_run(ctx, run_id)
     if record is None:
         return 404, error_envelope(
             f"run {run_id!r} not found",
@@ -563,7 +703,7 @@ def handle_ledger_verify(
     """Verify chain integrity for a run."""
     from epr.ledger import verify_chain
 
-    record = ctx.registry.get(run_id)
+    record = _visible_run(ctx, run_id)
     if record is None:
         return 404, error_envelope(
             f"run {run_id!r} not found",
@@ -585,7 +725,7 @@ def handle_ledger_export(
     run_id: str, ctx: PipelineContext
 ) -> tuple[int, dict[str, Any]]:
     """Export the full chain as JSON."""
-    record = ctx.registry.get(run_id)
+    record = _visible_run(ctx, run_id)
     if record is None:
         return 404, error_envelope(
             f"run {run_id!r} not found",
@@ -731,7 +871,7 @@ def handle_run_benchmark(
             }
         except Exception as exc:
             return 500, error_envelope(
-                f"Benchmark failed: {exc}",
+                "Benchmark failed",
                 "server_error",
                 None,
                 "benchmark_failed",
@@ -761,7 +901,7 @@ def handle_list_benchmark_results(
             return 200, paginate(results, limit, offset)
         except Exception as exc:
             return 500, error_envelope(
-                f"Failed to list benchmark results: {exc}",
+                "Failed to list benchmark results",
                 "server_error",
                 None,
                 "benchmark_list_failed",
@@ -999,9 +1139,16 @@ def handle_create_api_key(
             tenant_id=body.get("tenant_id", "default"),
         )
         return 201, result
+    except ValueError as exc:
+        return 400, error_envelope(
+            str(exc),
+            "invalid_request_error",
+            None,
+            "invalid_api_key_configuration",
+        )
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to create API key: {exc}",
+            "Failed to create API key",
             "server_error",
             None,
             "key_creation_failed",
@@ -1028,7 +1175,7 @@ def handle_list_api_keys(
         return 200, {"object": "list", "data": keys, "count": len(keys)}
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to list API keys: {exc}",
+            "Failed to list API keys",
             "server_error",
             None,
             "key_list_failed",
@@ -1062,7 +1209,7 @@ def handle_revoke_api_key(
         return 200, {"status": "revoked", "key_id": key_id}
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to revoke API key: {exc}",
+            "Failed to revoke API key",
             "server_error",
             None,
             "key_revoke_failed",
@@ -1096,7 +1243,7 @@ def handle_rotate_api_key(
         )
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to rotate API key: {exc}",
+            "Failed to rotate API key",
             "server_error",
             None,
             "key_rotate_failed",
@@ -1108,7 +1255,7 @@ def handle_rotate_api_key(
 # ---------------------------------------------------------------------------
 
 
-def _get_analytics_engine(ctx: PipelineContext):
+def _get_analytics_engine(ctx: PipelineContext) -> Any | None:
     """Get or create the AnalyticsEngine from the pipeline context."""
     if ctx.analytics is not None:
         return ctx.analytics
@@ -1160,7 +1307,7 @@ def handle_cost_analytics(
             return 200, data
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to get cost analytics: {exc}",
+            "Failed to get cost analytics",
             "server_error",
             None,
             "analytics_failed",
@@ -1202,7 +1349,7 @@ def handle_performance_analytics(
             return 200, {"object": "performance", "data": data}
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to get performance analytics: {exc}",
+            "Failed to get performance analytics",
             "server_error",
             None,
             "analytics_failed",
@@ -1247,7 +1394,7 @@ def handle_usage_analytics(
             return 200, data
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to get usage analytics: {exc}",
+            "Failed to get usage analytics",
             "server_error",
             None,
             "analytics_failed",
@@ -1290,7 +1437,7 @@ def handle_escalation_analytics(
             return 200, data
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to get escalation analytics: {exc}",
+            "Failed to get escalation analytics",
             "server_error",
             None,
             "analytics_failed",
@@ -1344,7 +1491,7 @@ def handle_audit_analytics(
             return 200, {"object": "audit_timeline", "data": data}
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to get audit analytics: {exc}",
+            "Failed to get audit analytics",
             "server_error",
             None,
             "analytics_failed",
@@ -1399,7 +1546,7 @@ def handle_benchmark_analytics(
             return 200, data
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to get benchmark analytics: {exc}",
+            "Failed to get benchmark analytics",
             "server_error",
             None,
             "analytics_failed",
@@ -1423,7 +1570,7 @@ def handle_dashboard_data(
         return 200, data
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to get dashboard data: {exc}",
+            "Failed to get dashboard data",
             "server_error",
             None,
             "analytics_failed",
@@ -1454,14 +1601,19 @@ def handle_export_data(
         )
     try:
         db = ctx.registry._db  # type: ignore[attr-defined]
-        export_path = db.export_json(".noerelay/export.json")
+        export_file = _managed_database_path(
+            db,
+            None,
+            f"{Path(db._db_path).stem}-export.json",  # type: ignore[attr-defined]
+        )
+        export_path = db.export_json(str(export_file))
         return 200, {
             "status": "ok",
             "export_path": export_path,
         }
     except Exception as exc:
         return 500, error_envelope(
-            f"Export failed: {exc}",
+            "Export failed",
             "server_error",
             None,
             "export_failed",
@@ -1489,7 +1641,8 @@ def handle_import_data(
         )
     try:
         db = ctx.registry._db  # type: ignore[attr-defined]
-        db.restore(import_path)
+        managed_path = _managed_database_path(db, str(import_path), "")
+        db.restore(str(managed_path))
         return 200, {
             "status": "ok",
             "message": f"Imported from {import_path}",
@@ -1501,9 +1654,16 @@ def handle_import_data(
             "import_path",
             "import_not_found",
         )
+    except ValueError as exc:
+        return 400, error_envelope(
+            str(exc),
+            "invalid_request_error",
+            "import_path",
+            "invalid_import_path",
+        )
     except Exception as exc:
         return 500, error_envelope(
-            f"Import failed: {exc}",
+            "Import failed",
             "server_error",
             None,
             "import_failed",
@@ -1516,9 +1676,11 @@ def handle_import_data(
 
 
 def handle_list_tenants(
-    ctx: PipelineContext, tenant_manager: Any = None
+    ctx: PipelineContext,
+    tenant_manager: Any = None,
+    tenant_id: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
-    """GET /v1/tenants — List all tenants."""
+    """GET /v1/tenants — List all tenants or one authenticated tenant."""
     if tenant_manager is None:
         return 501, error_envelope(
             "Tenant manager not enabled",
@@ -1527,11 +1689,15 @@ def handle_list_tenants(
             "tenants_not_enabled",
         )
     try:
-        tenants = tenant_manager.list_tenants()
+        if tenant_id is None:
+            tenants = tenant_manager.list_tenants()
+        else:
+            tenant = tenant_manager.get_tenant(tenant_id)
+            tenants = [tenant] if tenant is not None else []
         return 200, {"tenants": tenants, "count": len(tenants)}
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to list tenants: {exc}",
+            "Failed to list tenants",
             "server_error",
             None,
             "tenants_failed",
@@ -1568,7 +1734,7 @@ def handle_create_tenant(
         return 201, tenant
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to create tenant: {exc}",
+            "Failed to create tenant",
             "server_error",
             None,
             "tenant_create_failed",
@@ -1598,7 +1764,7 @@ def handle_update_tenant(
         return 200, tenant
     except Exception as exc:
         return 500, error_envelope(
-            f"Failed to update tenant: {exc}",
+            "Failed to update tenant",
             "server_error",
             None,
             "tenant_update_failed",
@@ -1758,12 +1924,20 @@ def handle_register_webhook(
             None,
             "missing_field",
         )
-    webhook = webhook_manager.register(
-        url=url,
-        events=events,
-        secret=body.get("secret"),
-        tenant_id=body.get("tenant_id"),
-    )
+    try:
+        webhook = webhook_manager.register(
+            url=url,
+            events=events,
+            secret=body.get("secret"),
+            tenant_id=body.get("tenant_id"),
+        )
+    except (TypeError, ValueError) as exc:
+        return 400, error_envelope(
+            str(exc),
+            "invalid_request_error",
+            "url",
+            "invalid_webhook",
+        )
     return 201, webhook
 
 

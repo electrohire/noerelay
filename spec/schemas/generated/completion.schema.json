@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Completion",
+  "type": "object",
+  "required": [
+    "outcome"
+  ],
+  "properties": {
+    "outcome": {
+      "$ref": "#/definitions/ReleaseOutcome"
+    },
+    "receipt": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RunReceipt"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "ReleaseOutcome": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "repair_required",
+        "escalation_required",
+        "human_approval_required"
+      ]
+    },
+    "RunReceipt": {
+      "type": "object",
+      "required": [
+        "actual_cost_microusd",
+        "contract_hash",
+        "cost_source",
+        "input_tokens",
+        "ledger_head",
+        "organization_id",
+        "output_sha256",
+        "output_tokens",
+        "project_id",
+        "receipt_hash",
+        "receipt_version",
+        "release_outcome",
+        "run_id",
+        "selected_candidate_id",
+        "user_id"
+      ],
+      "properties": {
+        "actual_cost_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "contract_hash": {
+          "type": "string"
+        },
+        "cost_source": {
+          "type": "string"
+        },
+        "input_tokens": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "ledger_head": {
+          "type": "string"
+        },
+        "organization_id": {
+          "type": "string"
+        },
+        "output_sha256": {
+          "type": "string"
+        },
+        "output_tokens": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "receipt_hash": {
+          "type": "string"
+        },
+        "receipt_version": {
+          "type": "string"
+        },
+        "release_outcome": {
+          "$ref": "#/definitions/ReleaseOutcome"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "selected_candidate_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,399 +1,130 @@
-# Open WebUI Setup Guide for NoeRelay
+# Open WebUI setup for NoeRelay
 
-**Version:** 1.0
+**NoeRelay version:** `0.1.0-draft`
 **Last updated:** 2026-08-20
 
-This guide walks through setting up [Open WebUI](https://github.com/open-webui/open-webui) to use NoeRelay as its OpenAI-compatible backend. Open WebUI provides a ChatGPT-like web interface that connects to NoeRelay's governed model routing.
+Open WebUI can use NoeRelay as a custom OpenAI-wire-compatible backend. “OpenAI-compatible” refers only to the client protocol: NoeRelay routes through explicitly permitted non-OpenAI models via OpenRouter or local Ollama and rejects OpenAI model families.
 
----
+## Prerequisites
 
-## Table of Contents
+- Docker Engine and Docker Compose v2
+- This repository
+- Optional: `OPENROUTER_API_KEY` for live cloud inference
+- Optional: enough disk and memory for an Ollama model
 
-1. [Prerequisites](#1-prerequisites)
-2. [Quick Start (Docker Compose)](#2-quick-start-docker-compose)
-3. [Manual Setup (Existing Open WebUI)](#3-manual-setup-existing-open-webui)
-4. [Verification](#4-verification)
-5. [Configuration Reference](#5-configuration-reference)
-6. [Architecture](#6-architecture)
-7. [Troubleshooting](#7-troubleshooting)
-8. [Advanced Configuration](#8-advanced-configuration)
+## Docker Compose quick start
 
----
-
-## 1. Prerequisites
-
-- **Docker** and **Docker Compose** installed
-- **NoeRelay** repository cloned
-- Optional: **OpenRouter API key** (for live mode; stub mode works without it)
-- Optional: **Ollama** (for local model routing)
-
----
-
-## 2. Quick Start (Docker Compose)
-
-The easiest way to get started is using the provided Docker Compose files:
-
-### Step 1: Start the Stack
+Choose local secrets before shared use. The literal defaults below are development-only:
 
 ```bash
-# From the NoeRelay repository root
-docker-compose -f docker-compose.yml -f docker-compose.openwebui.yml up -d
+export NOERELAY_API_KEY="replace-with-a-random-key"
+export NOERELAY_MASTER_KEY="replace-with-a-separate-random-key"
+export WEBUI_SECRET_KEY="replace-with-a-random-session-key"
+docker compose -f docker-compose.yml -f docker-compose.openwebui.yml up --build -d
 ```
 
-This starts three services:
-- **noerelay** — The NoeRelay gateway on port 8080
-- **ollama** — Local model provider on port 11434 (optional, for local models)
-- **open-webui** — Web chat interface on port 3000
+PowerShell:
 
-### Step 2: Wait for Services to be Healthy
+```powershell
+$env:NOERELAY_API_KEY = "replace-with-a-random-key"
+$env:NOERELAY_MASTER_KEY = "replace-with-a-separate-random-key"
+$env:WEBUI_SECRET_KEY = "replace-with-a-random-session-key"
+docker compose -f docker-compose.yml -f docker-compose.openwebui.yml up --build -d
+```
+
+Compose places both containers on its default network. Open WebUI connects internally to `http://noerelay:8080/v1` and uses the same `NOERELAY_API_KEY` passed to the gateway.
+
+Verify the services:
 
 ```bash
-# Check NoeRelay health
 curl http://localhost:8080/health
-# Expected: {"status": "healthy", "version": "0.1.0"}
-
-# Check Open WebUI health
+curl -H "Authorization: Bearer $NOERELAY_API_KEY" http://localhost:8080/v1/models
 curl http://localhost:3000
-# Expected: HTML response (the Open WebUI login page)
 ```
 
-### Step 3: Access Open WebUI
+Open [http://localhost:3000](http://localhost:3000), create the initial administrator, select `noerelay/epr-1`, and send a message. Disable `ENABLE_SIGNUP` after the initial account is created when the deployment is not a disposable local environment.
 
-1. Open your browser to **http://localhost:3000**
-2. On first access, create an admin account (email + password)
-3. After login, you'll see the chat interface
+## Connect an existing Open WebUI installation
 
-### Step 4: Verify the Connection
+Start NoeRelay and set an API key when it is reachable beyond loopback. In Open WebUI:
 
-The connection to NoeRelay is pre-configured via environment variables. To verify:
+1. Open **Admin Panel → Settings → Connections** (the label may differ by Open WebUI version).
+2. Add an OpenAI-compatible connection.
+3. Set the base URL to the address Open WebUI can reach, ending in `/v1`.
+4. Set the API key to a value accepted by `NOERELAY_AUTH_API_KEYS` or a database-managed NoeRelay key.
+5. Save or test the connection, then select `noerelay/epr-1`.
 
-1. Click the model selector dropdown (top-left of chat input)
-2. You should see **`noerelay/epr-1`** in the model list
-3. Select it and send a test message: "Hello! What is 2+2?"
-4. You should receive a response routed through NoeRelay's governance pipeline
+Use `http://host.docker.internal:8080/v1` when Open WebUI runs in Docker Desktop and NoeRelay runs directly on the Windows or macOS host. On Linux, use an explicit host-gateway mapping or a shared Docker network. `127.0.0.1` inside the Open WebUI container refers to that container, not the host.
 
-### Step 5: Check EPR Metadata
+## Verify completion and EPR metadata
 
-NoeRelay includes EPR (Epistemic Process Recording) metadata in every response. In Open WebUI:
-
-1. Send a message
-2. The response includes standard OpenAI fields plus NoeRelay governance metadata
-3. You can inspect run details via the NoeRelay dashboard at **http://localhost:8080/dashboard**
-
----
-
-## 3. Manual Setup (Existing Open WebUI)
-
-If you already have Open WebUI running and want to connect it to NoeRelay:
-
-### Step 1: Start NoeRelay
+Open WebUI renders the assistant content but may not surface arbitrary top-level response extensions. Verify the full NoeRelay response directly:
 
 ```bash
-# From the NoeRelay repository
-cd reference
-# Windows PowerShell:
-$env:NOERELAY_OPENROUTER_MODE='stub'
-python -m gateway
-
-# Linux/macOS:
-NOERELAY_OPENROUTER_MODE=stub python -m gateway
-```
-
-NoeRelay is now running at `http://127.0.0.1:8080`.
-
-### Step 2: Configure Open WebUI
-
-1. Open Open WebUI in your browser
-2. Go to **Settings** (gear icon, bottom-left)
-3. Navigate to **Connections** → **OpenAI API**
-4. Fill in the connection details:
-
-   | Field | Value |
-   |---|---|
-   | **Base URL** | `http://127.0.0.1:8080/v1` |
-   | **API Key** | `any-value` (or your NoeRelay API key if auth is enabled) |
-
-5. Click **"Test Connection"** — you should see a success message
-6. Click **Save**
-
-### Step 3: Select the Model
-
-1. Return to the chat interface
-2. Click the model selector dropdown
-3. Select **`noerelay/epr-1`**
-4. Start chatting!
-
----
-
-## 4. Verification
-
-### Verify Model Listing
-
-```bash
-# Direct API call to verify models
-curl http://127.0.0.1:8080/v1/models
-```
-
-Expected response:
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "noerelay/epr-1",
-      "object": "model",
-      "created": 1700000000,
-      "owned_by": "electrohire"
-    }
-  ]
-}
-```
-
-### Verify Chat Completion
-
-```bash
-curl -X POST http://127.0.0.1:8080/v1/chat/completions \
+curl http://localhost:8080/v1/chat/completions \
+  -H "Authorization: Bearer $NOERELAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "noerelay/epr-1",
-    "messages": [{"role": "user", "content": "Hello! What is 2+2?"}]
-  }'
+  -d '{"model":"noerelay/epr-1","messages":[{"role":"user","content":"What is 2+2?"}]}'
 ```
 
-Expected: A JSON response with `choices[0].message.content` containing the answer.
-
-### Verify Streaming
+The returned `epr.run_id` can be used with the authenticated run endpoint:
 
 ```bash
-curl -X POST http://127.0.0.1:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "noerelay/epr-1",
-    "messages": [{"role": "user", "content": "Count from 1 to 5."}],
-    "stream": true
-  }'
+curl -H "Authorization: Bearer $NOERELAY_API_KEY" \
+  http://localhost:8080/v1/noerelay/runs/RUN_ID/receipt
 ```
 
-Expected: SSE stream with `data: {...}` chunks ending with `data: [DONE]`.
+Streaming uses server-sent events and ends with `data: [DONE]`. The terminal metadata chunk contains the EPR extension.
 
-### Verify EPR Metadata
+## Live OpenRouter mode
 
-In the chat completion response, look for the `epr` block:
+Add these values to the ignored local `.env` file or inject them through your secret manager:
 
-```json
-{
-  "epr": {
-    "run_id": "run-abc123",
-    "receipt_id": "r-xyz789",
-    "status": "accepted",
-    "model_used": "openai/gpt-4o-mini",
-    "gateway": "openrouter",
-    "cost_usd": 0.000015,
-    "latency_ms": 450,
-    "risk_class": "low",
-    "hir": false,
-    "rr": false,
-    "chain_hash": "sha256:abc123..."
-  }
-}
-```
-
----
-
-## 5. Configuration Reference
-
-### Docker Compose Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `OPENAI_API_BASE_URL` | `http://noerelay:8080/v1` | NoeRelay API endpoint |
-| `OPENAI_API_KEY` | `noerelay` | API key for NoeRelay |
-| `WEBUI_NAME` | `NoeRelay Chat` | Display name in the UI |
-| `WEBUI_URL` | `http://localhost:3000` | Public URL of the WebUI |
-| `ENABLE_SIGNUP` | `true` | Allow new account creation |
-| `DEFAULT_MODELS` | `noerelay/epr-1` | Pre-selected model |
-| `LOG_LEVEL` | `INFO` | Logging verbosity |
-
-### NoeRelay Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `NOERELAY_OPENROUTER_MODE` | `stub` | `stub` (no API key) or `live` (needs key) |
-| `NOERELAY_GATEWAY_HOST` | `127.0.0.1` | Bind address |
-| `NOERELAY_GATEWAY_PORT` | `8080` | Listen port |
-| `NOERELAY_DATABASE_ENABLED` | `0` | Enable SQLite persistence |
-| `NOERELAY_LOG_LEVEL` | `INFO` | Log level |
-
----
-
-## 6. Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Browser (http://localhost:3000)                         │
-│  Open WebUI — ChatGPT-like chat interface                │
-└──────────────────────┬──────────────────────────────────┘
-                       │ OpenAI-compatible API calls
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│  NoeRelay Gateway (http://noerelay:8080/v1)              │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  Contract → Policy → Route → Execute → Verify    │   │
-│  └──────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  EPR Ledger + Evidence Receipts                   │   │
-│  └──────────────────────────────────────────────────┘   │
-└────────┬──────────────────────────────┬─────────────────┘
-         │                              │
-         ▼                              ▼
-┌─────────────────────┐    ┌─────────────────────────────┐
-│  Ollama (local)      │    │  OpenRouter (cloud)          │
-│  localhost:11434     │    │  openrouter.ai/api/v1        │
-│  - qwen3:8b          │    │  - openai/gpt-4o-mini        │
-│  - llama3.2          │    │  - anthropic/claude-3.5      │
-│  - ...               │    │  - google/gemini-flash       │
-└─────────────────────┘    └─────────────────────────────┘
-```
-
-**Request flow:**
-1. User types a message in Open WebUI
-2. Open WebUI sends an OpenAI-compatible request to NoeRelay
-3. NoeRelay compiles a task contract, applies governance policy
-4. NoeRelay routes to the best model (local Ollama first, cloud OpenRouter fallback)
-5. Response is verified through the verification DAG
-6. Evidence receipt is generated and stored in the hash-linked ledger
-7. Response (with EPR metadata) is returned to Open WebUI
-8. Open WebUI displays the response to the user
-
----
-
-## 7. Troubleshooting
-
-### Connection Refused
-
-**Symptom:** Open WebUI shows "Connection refused" or "Failed to fetch"
-
-**Solutions:**
-1. Verify NoeRelay is running: `curl http://localhost:8080/health`
-2. Check Docker network: `docker network ls` — ensure both containers are on the same network
-3. Check NoeRelay logs: `docker logs noerelay-noerelay-1`
-4. Verify the base URL in Open WebUI settings is `http://noerelay:8080/v1` (not `localhost`)
-
-### Model Not Found
-
-**Symptom:** "Model not found" or model list is empty
-
-**Solutions:**
-1. Verify models endpoint: `curl http://localhost:8080/v1/models`
-2. Check NoeRelay logs for startup errors
-3. Ensure the portfolio file exists: `examples/candidate-actions.json`
-4. Restart NoeRelay: `docker-compose restart noerelay`
-
-### Authentication Error
-
-**Symptom:** 401 Unauthorized
-
-**Solutions:**
-1. By default, NoeRelay auth is disabled on loopback. If you enabled auth, use a valid API key.
-2. Create an API key: `curl -X POST http://localhost:8080/v1/api-keys -H "Content-Type: application/json" -d '{"name":"open-webui"}'`
-3. Use the returned key in Open WebUI settings
-
-### Streaming Not Working
-
-**Symptom:** Non-streaming works but streaming doesn't
-
-**Solutions:**
-1. Verify streaming works directly: `curl -X POST http://localhost:8080/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"noerelay/epr-1","messages":[{"role":"user","content":"Hi"}],"stream":true}'`
-2. Check Open WebUI logs: `docker logs noerelay-openwebui`
-3. Some Open WebUI versions have streaming issues with custom endpoints — try updating Open WebUI
-
-### Empty Responses
-
-**Symptom:** Response is empty or contains only EPR metadata
-
-**Solutions:**
-1. In stub mode, responses are simulated. Switch to live mode for real responses.
-2. Set `NOERELAY_OPENROUTER_MODE=live` and provide `OPENROUTER_API_KEY`
-3. Check that OpenRouter has available models
-
----
-
-## 8. Advanced Configuration
-
-### Using a Custom API Key
-
-If you've enabled authentication in NoeRelay:
-
-```bash
-# Create an API key
-curl -X POST http://localhost:8080/v1/api-keys \
-  -H "Content-Type: application/json" \
-  -d '{"name":"open-webui","role":"admin"}'
-
-# Use the returned key in docker-compose
-# docker-compose.openwebui.yml:
-#   OPENAI_API_KEY=sk-your-key-here
-```
-
-### Enabling Live Mode with OpenRouter
-
-```bash
-# Set your OpenRouter API key
-export OPENROUTER_API_KEY=sk-or-v1-your-key
-
-# Start with live mode
-docker-compose -f docker-compose.yml -f docker-compose.openwebui.yml up -d
-```
-
-Or in `.env`:
-```
-OPENROUTER_API_KEY=sk-or-v1-your-key
+```dotenv
 NOERELAY_OPENROUTER_MODE=live
+OPENROUTER_API_KEY=replace-with-your-openrouter-key
 ```
 
-### Using Local Ollama Models
+Then recreate the gateway. No `OPENAI_API_KEY` is accepted or required by NoeRelay; the similarly named Open WebUI connection variable is only how Open WebUI labels custom compatible backends.
 
-The docker-compose already includes Ollama. To use local models:
+## Local Ollama models
+
+The base Compose file starts Ollama, but it does not download model weights automatically:
 
 ```bash
-# Pull a model into Ollama
-docker exec noerelay-ollama-1 ollama pull qwen3:8b
-
-# NoeRelay will automatically discover and prefer local models
+docker compose exec ollama ollama pull qwen3:8b
 ```
 
-### Governance Configuration
+Only routes admitted by the configured portfolio and policy are eligible. Downloading a model does not by itself promote it into every governed cohort.
 
-Add governance constraints to requests through Open WebUI by using the API directly:
+## Architecture
 
-```bash
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "noerelay/epr-1",
-    "messages": [{"role": "user", "content": "Write a function"}],
-    "governance": {
-      "risk_class": "high",
-      "data_policy": "zdr",
-      "max_cost_usd": 0.50,
-      "max_latency_ms": 120000
-    }
-  }'
+```text
+Browser
+  │
+  ▼
+Open WebUI :3000
+  │  compatible HTTP + API key
+  ▼
+NoeRelay :8080
+  ├── contract → policy → route → execute → verify
+  ├── evidence receipt + hash-linked ledger
+  ├──► local Ollama (optional)
+  └──► OpenRouter → explicit non-OpenAI model IDs (optional live mode)
 ```
 
-### Accessing the NoeRelay Dashboard
+## Troubleshooting
 
-While using Open WebUI, you can also access the NoeRelay dashboard:
+**Open WebUI reports 401.** Ensure `NOERELAY_API_KEY` has the same value in both Compose services, then recreate them. The health endpoint is intentionally public, so a healthy response does not prove the model route is authenticated.
 
-- **Dashboard:** http://localhost:8080/dashboard
-- **Metrics:** http://localhost:8080/metrics
-- **API Reference:** http://localhost:8080/v1/models
+**The model list is empty.** Run the authenticated `/v1/models` curl command above. Check `docker compose logs noerelay` for startup configuration errors.
 
----
+**Connection refused.** From one Compose project, use `http://noerelay:8080/v1`, not `localhost`. Confirm both services with `docker compose ps`.
 
-## Next Steps
+**Browser origin is rejected.** Add the exact scheme, host, and port to `NOERELAY_CORS_ALLOWED_ORIGINS`; wildcard origins are deliberately rejected.
 
-- Read the [Integration Guide](integration-guide.md) for other client tools
-- Read the [API Reference](api-reference.md) for all 62+ endpoints
-- Read the [Architecture](architecture.md) for EPR-1 design details
-- Read the [Admin Guide](admin-guide.md) for tenant management and operations
+**No real provider answer appears.** Stub mode is deterministic and makes no provider call. Configure live mode and a valid OpenRouter key, or install an eligible Ollama route.
+
+**The dashboard URL returns 401.** Operational routes are protected when authentication is enabled. Use authenticated API calls or place an identity-aware reverse proxy in front of operator surfaces; do not expose them publicly.
+
+For deployment controls, backups, TLS, and monitoring, see [production deployment](production-deployment.md). For other clients, see the [integration guide](integration-guide.md).

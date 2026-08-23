@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ToolRevision",
+  "type": "object",
+  "required": [
+    "allowed_egress_hosts",
+    "allowed_organizations",
+    "allowed_projects",
+    "maximum_data_class",
+    "maximum_input_bytes",
+    "maximum_output_bytes",
+    "revision",
+    "side_effecting",
+    "tool_id"
+  ],
+  "properties": {
+    "allowed_egress_hosts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "allowed_organizations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "allowed_projects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "maximum_data_class": {
+      "$ref": "#/definitions/DataClass"
+    },
+    "maximum_input_bytes": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "maximum_output_bytes": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "revision": {
+      "type": "string"
+    },
+    "side_effecting": {
+      "type": "boolean"
+    },
+    "tool_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "DataClass": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    }
+  }
+}

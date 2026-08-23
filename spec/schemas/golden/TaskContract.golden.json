@@ -1,0 +1,21 @@
+{
+  "contract_version": "1.0.0",
+  "contract_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "request_id": "req-sample",
+  "outcome": "Build a reliable API endpoint",
+  "risk": "medium",
+  "acceptance_criteria": [
+    "Tests pass",
+    "Review approved"
+  ],
+  "required_capabilities": [
+    "coding"
+  ],
+  "allowed_tools": [],
+  "allowed_agents": [],
+  "max_cost_microusd": 50000,
+  "max_latency_ms": 30000,
+  "requires_independent_verifier": false,
+  "requires_human_approval": false,
+  "context_manifest_hash": null
+}

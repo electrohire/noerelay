@@ -1,0 +1,291 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PreparedRun",
+  "type": "object",
+  "required": [
+    "contract",
+    "reserved_cost_microusd",
+    "route",
+    "run_id",
+    "scope",
+    "verification_checks"
+  ],
+  "properties": {
+    "contract": {
+      "$ref": "#/definitions/TaskContract"
+    },
+    "reserved_cost_microusd": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "route": {
+      "$ref": "#/definitions/RouteDecision"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "scope": {
+      "$ref": "#/definitions/IdentityScope"
+    },
+    "verification_checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/VerificationCheck"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "CandidateRejection": {
+      "type": "object",
+      "required": [
+        "candidate_id",
+        "reasons"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RejectionReason"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CheckKind": {
+      "type": "string",
+      "enum": [
+        "schema",
+        "policy",
+        "deterministic_acceptance",
+        "independent_review",
+        "human_approval"
+      ]
+    },
+    "IdentityScope": {
+      "type": "object",
+      "required": [
+        "environment_id",
+        "organization_id",
+        "project_id",
+        "session_id",
+        "user_id"
+      ],
+      "properties": {
+        "environment_id": {
+          "type": "string"
+        },
+        "organization_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RejectionReason": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "unavailable",
+            "data_policy",
+            "provider_denied",
+            "invalid_model_identity",
+            "cost_cap",
+            "latency_cap",
+            "acceptance_threshold",
+            "independent_verification",
+            "arithmetic_overflow"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "missing_capability"
+          ],
+          "properties": {
+            "missing_capability": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "RiskClass": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "RouteDecision": {
+      "type": "object",
+      "required": [
+        "rejections"
+      ],
+      "properties": {
+        "expected_total_cost_microusd": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "rejections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CandidateRejection"
+          }
+        },
+        "selected_candidate_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selected_openrouter_model_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "TaskContract": {
+      "type": "object",
+      "required": [
+        "acceptance_criteria",
+        "allowed_agents",
+        "allowed_tools",
+        "contract_hash",
+        "contract_version",
+        "outcome",
+        "request_id",
+        "required_capabilities",
+        "requires_human_approval",
+        "requires_independent_verifier",
+        "risk"
+      ],
+      "properties": {
+        "acceptance_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowed_agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "allowed_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "context_manifest_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contract_hash": {
+          "type": "string"
+        },
+        "contract_version": {
+          "type": "string"
+        },
+        "max_cost_microusd": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "max_latency_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "requires_human_approval": {
+          "type": "boolean"
+        },
+        "requires_independent_verifier": {
+          "type": "boolean"
+        },
+        "risk": {
+          "$ref": "#/definitions/RiskClass"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VerificationCheck": {
+      "type": "object",
+      "required": [
+        "check_id",
+        "depends_on",
+        "kind"
+      ],
+      "properties": {
+        "check_id": {
+          "type": "string"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "kind": {
+          "$ref": "#/definitions/CheckKind"
+        },
+        "verifier_family": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

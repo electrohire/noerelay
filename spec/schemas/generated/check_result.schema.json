@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CheckResult",
+  "type": "object",
+  "required": [
+    "check_id",
+    "status"
+  ],
+  "properties": {
+    "check_id": {
+      "type": "string"
+    },
+    "observed_evidence_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "$ref": "#/definitions/CheckStatus"
+    },
+    "verifier_family": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "CheckStatus": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed",
+        "not_run",
+        "claimed"
+      ]
+    }
+  }
+}

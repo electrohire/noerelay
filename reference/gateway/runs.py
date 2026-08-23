@@ -29,6 +29,7 @@ def _now() -> str:
 class RunRecord:
     run_id: str
     trace_id: str
+    tenant_id: str = "default"
     task_id: str | None = None
     contract: dict[str, Any] | None = None
     decision: dict[str, Any] | None = None
@@ -59,9 +60,17 @@ class RunRecord:
 class RunRegistry:
     """In-memory, thread-safe run store with per-run ledger chains."""
 
-    def __init__(self) -> None:
+    def __init__(self, max_runs: int = 10000) -> None:
+        if max_runs < 1:
+            raise ValueError("max_runs must be at least 1")
         self._runs: dict[str, RunRecord] = {}
+        self._max_runs = max_runs
         self._lock = threading.Lock()
+
+    def _trim_locked(self) -> None:
+        """Evict oldest in-memory records while holding ``_lock``."""
+        while len(self._runs) > self._max_runs:
+            self._runs.pop(next(iter(self._runs)))
 
     def begin(self, run_id: str, trace_id: str) -> RunRecord:
         from .epistemic import EpistemicState  # local import avoids circular dep
@@ -72,13 +81,16 @@ class RunRegistry:
         record.epistemic_ledger = EpistemicLedgerEnricher()
         with self._lock:
             self._runs[run_id] = record
+            self._trim_locked()
         return record
 
     def get(self, run_id: str) -> RunRecord | None:
-        return self._runs.get(run_id)
+        with self._lock:
+            return self._runs.get(run_id)
 
     def _require(self, run_id: str) -> RunRecord:
-        record = self._runs.get(run_id)
+        with self._lock:
+            record = self._runs.get(run_id)
         if record is None:
             raise KeyError(run_id)
         return record
@@ -154,7 +166,8 @@ class RunRegistry:
         return receipt
 
     def get_receipt(self, run_id: str) -> dict[str, Any] | None:
-        record = self._runs.get(run_id)
+        with self._lock:
+            record = self._runs.get(run_id)
         return record.receipt if record else None
 
 

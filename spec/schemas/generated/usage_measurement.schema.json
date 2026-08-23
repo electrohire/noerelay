@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UsageMeasurement",
+  "type": "object",
+  "required": [
+    "cost_microusd",
+    "cost_source",
+    "input_tokens",
+    "output_tokens"
+  ],
+  "properties": {
+    "cost_microusd": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "cost_source": {
+      "type": "string"
+    },
+    "input_tokens": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "output_tokens": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

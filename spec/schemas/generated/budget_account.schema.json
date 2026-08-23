@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BudgetAccount",
+  "type": "object",
+  "required": [
+    "limit_microusd",
+    "reservations",
+    "spent_microusd"
+  ],
+  "properties": {
+    "limit_microusd": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "reservations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "spent_microusd": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

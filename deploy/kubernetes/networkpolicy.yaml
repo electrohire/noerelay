@@ -28,8 +28,13 @@ spec:
     - protocol: TCP
       port: 11434
   - to:
-    - namespaceSelector: {}
-      podSelector: {}
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 169.254.0.0/16
     ports:
     - protocol: TCP
       port: 443
@@ -39,4 +44,6 @@ spec:
     - namespaceSelector: {}
     ports:
     - protocol: UDP
+      port: 53
+    - protocol: TCP
       port: 53

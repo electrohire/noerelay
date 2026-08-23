@@ -1,0 +1,6 @@
+{
+  "model": "openai/gpt-4o-mini",
+  "messages": [{"role": "user", "content": "Count to three"}],
+  "stream": true,
+  "stream_options": {"include_usage": true}
+}

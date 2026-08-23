@@ -2,6 +2,8 @@
 
 **Last updated:** 2026-08-14
 
+> **Superseded:** This handoff predates ADR-0001 and must not be used as the current architecture baseline. Start with [`requirements.md`](requirements.md), [`verification-matrix.md`](verification-matrix.md), and [`adr/0001-rust-release-authority.md`](adr/0001-rust-release-authority.md). Rust—not Go—owns release authority.
+
 **Canonical repository:** [electrohire/noerelay](https://github.com/electrohire/noerelay)
 
 **Current delivery branch:** `docs/product-completion-plan`

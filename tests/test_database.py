@@ -762,16 +762,19 @@ class ConfigNewFieldsTests(unittest.TestCase):
             GatewayConfig.from_env({"NOERELAY_LOG_OUTPUT": "syslog"})
 
     def test_tls_config(self):
-        config = GatewayConfig.from_env({
-            "NOERELAY_TLS_ENABLED": "1",
-            "NOERELAY_TLS_CERT_PATH": "certs/cert.pem",
-            "NOERELAY_TLS_KEY_PATH": "certs/key.pem",
-        })
-        self.assertTrue(config.tls_enabled)
-        cert_str = str(config.tls_cert_path)
-        key_str = str(config.tls_key_path)
-        self.assertTrue("certs" in cert_str and "cert.pem" in cert_str)
-        self.assertTrue("certs" in key_str and "key.pem" in key_str)
+        with tempfile.TemporaryDirectory() as directory:
+            cert_path = Path(directory) / "cert.pem"
+            key_path = Path(directory) / "key.pem"
+            cert_path.write_text("test certificate", encoding="utf-8")
+            key_path.write_text("test key", encoding="utf-8")
+            config = GatewayConfig.from_env({
+                "NOERELAY_TLS_ENABLED": "1",
+                "NOERELAY_TLS_CERT_PATH": str(cert_path),
+                "NOERELAY_TLS_KEY_PATH": str(key_path),
+            })
+            self.assertTrue(config.tls_enabled)
+            self.assertEqual(Path(config.tls_cert_path), cert_path)
+            self.assertEqual(Path(config.tls_key_path), key_path)
 
 
 class TLSTests(unittest.TestCase):
@@ -782,26 +785,36 @@ class TLSTests(unittest.TestCase):
         self.assertFalse(config.tls_enabled)
 
     def test_tls_config_fields_present(self):
-        config = GatewayConfig.from_env({
-            "NOERELAY_TLS_ENABLED": "1",
-            "NOERELAY_TLS_CERT_PATH": "certs/cert.pem",
-            "NOERELAY_TLS_KEY_PATH": "certs/key.pem",
-        })
-        self.assertTrue(config.tls_enabled)
-        self.assertIsNotNone(config.tls_cert_path)
-        self.assertIsNotNone(config.tls_key_path)
+        with tempfile.TemporaryDirectory() as directory:
+            cert_path = Path(directory) / "cert.pem"
+            key_path = Path(directory) / "key.pem"
+            cert_path.touch()
+            key_path.touch()
+            config = GatewayConfig.from_env({
+                "NOERELAY_TLS_ENABLED": "1",
+                "NOERELAY_TLS_CERT_PATH": str(cert_path),
+                "NOERELAY_TLS_KEY_PATH": str(key_path),
+            })
+            self.assertTrue(config.tls_enabled)
+            self.assertIsNotNone(config.tls_cert_path)
+            self.assertIsNotNone(config.tls_key_path)
 
     def test_tls_relative_paths_resolved(self):
-        config = GatewayConfig.from_env({
-            "NOERELAY_TLS_ENABLED": "1",
-            "NOERELAY_TLS_CERT_PATH": "certs/cert.pem",
-            "NOERELAY_TLS_KEY_PATH": "certs/key.pem",
-        })
-        cert_str = str(config.tls_cert_path)
-        self.assertTrue(
-            "certs" in cert_str and "cert.pem" in cert_str,
-            f"Expected cert path to contain 'certs/cert.pem', got {cert_str}",
-        )
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            temp_root = Path(directory)
+            cert_path = temp_root / "cert.pem"
+            key_path = temp_root / "key.pem"
+            cert_path.touch()
+            key_path.touch()
+            cert_relative = cert_path.relative_to(ROOT)
+            key_relative = key_path.relative_to(ROOT)
+            config = GatewayConfig.from_env({
+                "NOERELAY_TLS_ENABLED": "1",
+                "NOERELAY_TLS_CERT_PATH": str(cert_relative),
+                "NOERELAY_TLS_KEY_PATH": str(key_relative),
+            })
+            self.assertEqual(Path(config.tls_cert_path), cert_path)
+            self.assertEqual(Path(config.tls_key_path), key_path)
 
 
 class BackupRestoreTests(unittest.TestCase):

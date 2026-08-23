@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim-1",
+  "kind": "fact",
+  "statement": "All tests pass for v1.0.0",
+  "state": "supported",
+  "supporting_evidence": [
+    "evidence-1"
+  ],
+  "refuting_evidence": []
+}

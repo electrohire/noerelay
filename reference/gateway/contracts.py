@@ -1,4 +1,13 @@
-"""Deterministic task-contract compilation from wire requests.
+# LEGACY: This module is a conformance oracle only.
+# It duplicates Rust authority logic from crates/noerelay-core/src/contract.rs
+# (ContractCompiler) and is deprecated in favor of generated types from the
+# canonical schema lineage. See spec/schemas/version.json and
+# docs/fnd-02-schema-lineage.md for migration guidance.
+#
+# Do not use this module for new development. Use generated Python types from
+# bindings/python/noerelay_types/ instead.
+#
+"""Deterministic task-contract compilation from wire requests (DEPRECATED).
 
 EPR-CON-001: an LLM-backed compiler MAY propose a task contract, but schema
 validation and policy defaults MUST be deterministic.  This module provides

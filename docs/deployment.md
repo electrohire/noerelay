@@ -1,5 +1,7 @@
 # NoeRelay Deployment Guide
 
+> **Historical reference:** This document describes the legacy Python conformance gateway. It is not the Rust/PostgreSQL authority path. Use [production-deployment.md](production-deployment.md) and [quickstart.md](quickstart.md) for current deployment instructions.
+
 ## 1. Docker Deployment
 
 ### Prerequisites
@@ -8,16 +10,21 @@
 
 ### Quick Start
 
+For security assumptions and a production checklist, read [production-deployment.md](production-deployment.md) first. The Compose fallbacks are for local evaluation.
+
 ```bash
 # Clone and build
 git clone https://github.com/electrohire/noerelay.git
 cd noerelay
 
 # Start with Docker Compose
+export NOERELAY_API_KEY="replace-with-a-random-key"
+export NOERELAY_MASTER_KEY="replace-with-a-separate-random-key"
 docker compose up -d
 
 # Verify
 curl http://127.0.0.1:8080/health
+curl -H "Authorization: Bearer $NOERELAY_API_KEY" http://127.0.0.1:8080/v1/models
 ```
 
 ### Configuration
@@ -28,6 +35,11 @@ Set environment variables in `.env` or pass directly:
 # Required for live mode
 OPENROUTER_API_KEY=sk-or-v1-...
 HF_TOKEN=hf_...
+
+# Required for a non-loopback deployment
+NOERELAY_AUTH_API_KEYS=replace-with-random-api-key
+NOERELAY_MASTER_KEY=replace-with-separate-random-master-key
+NOERELAY_CORS_ALLOWED_ORIGINS=https://chat.example.com
 
 # Optional
 NOERELAY_GATEWAY_PORT=8080
@@ -79,6 +91,9 @@ kubectl create namespace noerelay
 kubectl create secret generic noerelay-secrets \
   --from-literal=openrouter-api-key=sk-or-v1-... \
   --from-literal=hf-token=hf_... \
+  --from-literal=noerelay-api-keys=replace-with-random-api-key \
+  --from-literal=noerelay-master-key=replace-with-separate-random-master-key \
+  --from-literal=metrics-api-key=replace-with-random-api-key \
   -n noerelay
 
 # Apply manifests
@@ -150,6 +165,11 @@ All configuration is done via environment variables prefixed with `NOERELAY_`.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NOERELAY_AUTH_API_KEYS` | (none) | Comma-separated API keys for auth |
+| `NOERELAY_AUTH_REQUIRED` | Automatic | Defaults to enabled for non-loopback binds |
+| `NOERELAY_MASTER_KEY` | (none) | Required to enable managed secret encryption |
+| `NOERELAY_CORS_ALLOWED_ORIGINS` | Loopback port 3000 | Comma-separated exact browser origins; no wildcard |
+| `NOERELAY_MAX_REQUEST_BODY_BYTES` | `4194304` | Maximum JSON request body |
+| `NOERELAY_RUN_RETENTION_MAX` | `10000` | Maximum retained run records |
 | `NOERELAY_TLS_ENABLED` | `0` | Enable TLS (`0` or `1`) |
 | `NOERELAY_TLS_CERT_PATH` | (none) | Path to TLS certificate |
 | `NOERELAY_TLS_KEY_PATH` | (none) | Path to TLS private key |

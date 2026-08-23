@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TestCase",
+  "type": "object",
+  "required": [
+    "independent",
+    "requirement_ids",
+    "test_id"
+  ],
+  "properties": {
+    "independent": {
+      "type": "boolean"
+    },
+    "requirement_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "test_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

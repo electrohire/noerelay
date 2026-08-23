@@ -20,8 +20,8 @@ class DatabaseRunRegistry(RunRegistry):
     to a SQLite database. Reads fall through to the database.
     """
 
-    def __init__(self, db: SQLiteDatabase) -> None:
-        super().__init__()
+    def __init__(self, db: SQLiteDatabase, max_runs: int = 10000) -> None:
+        super().__init__(max_runs=max_runs)
         self._db = db
 
     def begin(self, run_id: str, trace_id: str) -> RunRecord:
@@ -125,6 +125,7 @@ class DatabaseRunRegistry(RunRegistry):
                 record = self._record_from_db(db_run)
                 with self._lock:
                     self._runs[run_id] = record
+                    self._trim_locked()
         return record
 
     def get_receipt(self, run_id: str) -> dict[str, Any] | None:
@@ -209,6 +210,7 @@ class DatabaseRunRegistry(RunRegistry):
         record = RunRecord(
             run_id=db_run.get("run_id", ""),
             trace_id=db_run.get("trace_id", ""),
+            tenant_id=self._db.get_run_tenant(db_run.get("run_id", "")),
             task_id=db_run.get("task_id"),
             total_tokens=int(db_run.get("total_tokens", 0)),
             prompt_tokens=int(db_run.get("prompt_tokens", 0)),

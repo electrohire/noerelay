@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MessageRole",
+  "type": "string",
+  "enum": [
+    "system",
+    "developer",
+    "user",
+    "assistant",
+    "tool"
+  ]
+}

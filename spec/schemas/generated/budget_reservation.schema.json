@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BudgetReservation",
+  "type": "object",
+  "required": [
+    "amount_microusd",
+    "reservation_id"
+  ],
+  "properties": {
+    "amount_microusd": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "reservation_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

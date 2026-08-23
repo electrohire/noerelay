@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ToolContext",
+  "type": "object",
+  "required": [
+    "granted_tools",
+    "risk",
+    "scope"
+  ],
+  "properties": {
+    "granted_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "human_approval_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "risk": {
+      "$ref": "#/definitions/RiskClass"
+    },
+    "scope": {
+      "$ref": "#/definitions/IdentityScope"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "IdentityScope": {
+      "type": "object",
+      "required": [
+        "environment_id",
+        "organization_id",
+        "project_id",
+        "session_id",
+        "user_id"
+      ],
+      "properties": {
+        "environment_id": {
+          "type": "string"
+        },
+        "organization_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RiskClass": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    }
+  }
+}

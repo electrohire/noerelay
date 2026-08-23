@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContextManifest",
+  "type": "object",
+  "required": [
+    "budget_tokens",
+    "included",
+    "manifest_hash",
+    "omitted_node_ids",
+    "used_tokens"
+  ],
+  "properties": {
+    "budget_tokens": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "included": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ContextNode"
+      }
+    },
+    "manifest_hash": {
+      "type": "string"
+    },
+    "omitted_node_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "used_tokens": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "ContextNode": {
+      "type": "object",
+      "required": [
+        "content",
+        "estimated_tokens",
+        "kind",
+        "node_id",
+        "salience_ppm",
+        "sequence",
+        "source_handle"
+      ],
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "estimated_tokens": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "explicitly_protected": {
+          "default": false,
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/definitions/NodeKind"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "salience_ppm": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "sequence": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "source_handle": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "NodeKind": {
+      "type": "string",
+      "enum": [
+        "requirement",
+        "decision",
+        "contradiction",
+        "approval",
+        "evidence_handle",
+        "tool_state",
+        "observation",
+        "conversation",
+        "summary"
+      ]
+    }
+  }
+}

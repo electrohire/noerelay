@@ -404,9 +404,11 @@ class DockerfileTests(unittest.TestCase):
     def test_dockerfile_has_from(self):
         dockerfile = ROOT / "Dockerfile"
         content = dockerfile.read_text()
-        self.assertIn("FROM python", content)
+        self.assertIn("FROM rust", content)
         self.assertIn("EXPOSE", content)
-        self.assertIn("CMD", content)
+        self.assertIn("ENTRYPOINT", content)
+        reference_content = (ROOT / "Dockerfile.reference").read_text()
+        self.assertIn("FROM python", reference_content)
 
     def test_dockerignore_exists(self):
         dockerignore = ROOT / ".dockerignore"

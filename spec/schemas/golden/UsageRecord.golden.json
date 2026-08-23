@@ -1,0 +1,23 @@
+{
+  "dimensions": {
+    "organization_id": "org",
+    "project_id": "project",
+    "environment_id": "prod",
+    "user_id": "user",
+    "api_key_id": "key-1",
+    "model_id": "vendor/model",
+    "agent_id": null,
+    "tool_id": null
+  },
+  "input_tokens": 500,
+  "output_tokens": 200,
+  "cost": {
+    "inference_microusd": 1000,
+    "tools_microusd": 200,
+    "verification_microusd": 100,
+    "expected_retry_microusd": 100,
+    "expected_fallback_microusd": 50,
+    "infrastructure_microusd": 25,
+    "expected_human_review_microusd": 25
+  }
+}

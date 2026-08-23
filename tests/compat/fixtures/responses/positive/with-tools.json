@@ -1,0 +1,11 @@
+{
+  "model": "openai/gpt-4o-mini",
+  "input": [{"role": "user", "content": [{"type": "input_text", "text": "Weather in Boston?"}]}],
+  "tools": [{
+    "type": "function",
+    "name": "weather",
+    "description": "Get weather",
+    "parameters": {"type": "object", "properties": {"city": {"type": "string"}}}
+  }],
+  "tool_choice": "auto"
+}

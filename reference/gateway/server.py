@@ -12,7 +12,9 @@ import signal
 import ssl
 import threading
 import time
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -62,6 +64,7 @@ from .handlers import (
     handle_model_recommendations,
     handle_performance_analytics,
     handle_pull_model,
+    handle_readiness,
     handle_register_model,
     handle_register_webhook,
     handle_remove_candidate,
@@ -100,6 +103,16 @@ _ALERT_ACK_PATH = re.compile(r"^/v1/alerts/([A-Za-z0-9][A-Za-z0-9._:/-]{0,127})/
 _WEBHOOK_PATH = re.compile(r"^/v1/webhooks/([A-Za-z0-9][A-Za-z0-9._:/-]{0,127})$")
 _CONFIG_KEY_PATH = re.compile(r"^/v1/config/([A-Za-z0-9][A-Za-z0-9._:/-]{0,127})$")
 _SECRET_PATH = re.compile(r"^/v1/secrets/([A-Za-z0-9][A-Za-z0-9._:/-]{0,127})$")
+_REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+
+
+class _NoeRelayHTTPServer(ThreadingHTTPServer):
+    """Thread-per-request server with bounded shutdown-safe workers."""
+
+    daemon_threads = True
+    block_on_close = True
+    allow_reuse_address = True
+    request_queue_size = 128
 
 
 class _ShutdownState:
@@ -121,7 +134,7 @@ def _setup_graceful_shutdown(
     to drain (up to 30 seconds) before shutting down the server.
     """
 
-    def shutdown(signum, frame):  # noqa: ANN001 - stdlib signature
+    def shutdown(signum: int, frame: Any) -> None:
         if shutdown_state is not None:
             with shutdown_state.lock:
                 shutdown_state.shutdown_requested = True
@@ -129,13 +142,16 @@ def _setup_graceful_shutdown(
             # Wait for active requests to complete (max 30 seconds)
             timeout = 30
             start = time.monotonic()
-            while shutdown_state.active_requests > 0 and (time.monotonic() - start) < timeout:
+            while (time.monotonic() - start) < timeout:
+                with shutdown_state.lock:
+                    active_requests = shutdown_state.active_requests
+                if active_requests == 0:
+                    break
                 time.sleep(0.1)
 
-        try:
-            server.shutdown()
-        except Exception:
-            pass
+        # BaseServer.shutdown() must run on a different thread from
+        # serve_forever(); signal handlers execute on the main thread.
+        threading.Thread(target=server.shutdown, daemon=True).start()
 
     for sig in (signal.SIGTERM, signal.SIGINT):
         try:
@@ -149,18 +165,66 @@ def create_server(
     config: GatewayConfig, ctx: PipelineContext
 ) -> ThreadingHTTPServer:
     shutdown_state = _ShutdownState()
+    request_slots = threading.BoundedSemaphore(config.max_concurrent_requests)
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "NoeRelayGateway/0.1.0"
 
-        def log_message(self, format, *args):  # noqa: A002 - stdlib signature
+        def setup(self) -> None:
+            super().setup()
+            self.connection.settimeout(config.request_timeout_seconds)
+
+        def _get_request_id(self) -> str:
+            current = getattr(self, "_noerelay_request_id", None)
+            if current is not None:
+                return str(current)
+            supplied = self.headers.get("X-Request-ID", "")
+            request_id = supplied if _REQUEST_ID.fullmatch(supplied) else uuid.uuid4().hex
+            self._noerelay_request_id = request_id
+            return request_id
+
+        def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
             return
 
-        def _send_json(self, status: int, body: dict) -> None:
+        def _cors_origin(self) -> str | None:
+            """Return a configured origin when this request is CORS-eligible."""
+            origin = self.headers.get("Origin", "").rstrip("/")
+            if origin and origin in config.cors_allowed_origins:
+                return origin
+            return None
+
+        def _send_common_headers(self, extra_headers: dict[str, str] | None = None) -> None:
+            origin = self._cors_origin()
+            if origin is not None:
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Vary", "Origin")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+            self.send_header("X-Request-ID", self._get_request_id())
+            if config.tls_enabled or config.trusted_proxy_tls:
+                self.send_header(
+                    "Strict-Transport-Security",
+                    "max-age=31536000; includeSubDomains",
+                )
+            response_headers = dict(getattr(self, "_response_extra_headers", {}))
+            response_headers.update(extra_headers or {})
+            for name, value in response_headers.items():
+                self.send_header(name, value)
+
+        def _send_json(
+            self,
+            status: int,
+            body: dict,
+            extra_headers: dict[str, str] | None = None,
+        ) -> None:
             data = json.dumps(body, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))
+            self._send_common_headers(extra_headers)
             self.end_headers()
             self.wfile.write(data)
 
@@ -169,6 +233,7 @@ def create_server(
             self.send_response(status)
             self.send_header("Content-Type", f"{content_type}; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
+            self._send_common_headers()
             self.end_headers()
             self.wfile.write(data)
 
@@ -177,6 +242,7 @@ def create_server(
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "keep-alive")
+            self._send_common_headers()
             self.end_headers()
             for chunk in stream.chunks:
                 self.wfile.write(SSEStreamer.format_chunk(chunk).encode("utf-8"))
@@ -189,6 +255,12 @@ def create_server(
 
         def _path(self) -> str:
             return urlparse(self.path).path
+
+        def _scoped_tenant(self, requested: str | None) -> str | None:
+            """Prevent non-admin identities from selecting another tenant."""
+            role = getattr(ctx.request_local, "role", None)
+            tenant_id = getattr(ctx.request_local, "tenant_id", "default")
+            return requested if role in (None, "admin") else tenant_id
 
         def _check_rbac_and_audit(
             self, method: str, path: str, role: str | None, action: str
@@ -233,6 +305,34 @@ def create_server(
                 )
             return True
 
+        def _query_int(
+            self,
+            query: dict[str, list[str]],
+            name: str,
+            default: int,
+            *,
+            minimum: int = 0,
+            maximum: int = 1000,
+        ) -> int | None:
+            """Parse one bounded integer query parameter or send a 400."""
+            raw = query.get(name, [str(default)])[0]
+            try:
+                value = int(raw)
+            except (TypeError, ValueError):
+                value = minimum - 1
+            if not minimum <= value <= maximum:
+                self._send_json(
+                    400,
+                    error_envelope(
+                        f"{name} must be an integer from {minimum} to {maximum}",
+                        "invalid_request_error",
+                        name,
+                        "invalid_query_parameter",
+                    ),
+                )
+                return None
+            return value
+
         def _handle_get(self) -> None:
             path = self._path()
             qs = parse_qs(urlparse(self.path).query)
@@ -267,6 +367,9 @@ def create_server(
                 return self._send_json(status, body)
             if path == "/health" and config.enable_health_endpoint:
                 status, body = handle_health(ctx)
+                return self._send_json(status, body)
+            if path == "/ready" and config.enable_health_endpoint:
+                status, body = handle_readiness(ctx)
                 return self._send_json(status, body)
             if path == "/metrics" and config.enable_metrics_endpoint:
                 accept = self.headers.get("Accept", "")
@@ -310,12 +413,16 @@ def create_server(
 
             # Benchmark
             if path == "/v1/benchmarks/results":
+                limit = self._query_int(qs, "limit", 50, minimum=1, maximum=1000)
+                offset = self._query_int(qs, "offset", 0, maximum=1_000_000)
+                if limit is None or offset is None:
+                    return
                 status, body = handle_list_benchmark_results(
                     ctx,
                     cohort=qs.get("cohort", [None])[0],
                     model_id=qs.get("model_id", [None])[0],
-                    limit=int(qs.get("limit", ["50"])[0]),
-                    offset=int(qs.get("offset", ["0"])[0]),
+                    limit=limit,
+                    offset=offset,
                 )
                 return self._send_json(status, body)
             if path == "/v1/benchmarks/compare":
@@ -341,7 +448,8 @@ def create_server(
             # API Keys
             if path == "/v1/api-keys":
                 status, body = handle_list_api_keys(
-                    ctx, tenant_id=qs.get("tenant_id", [None])[0]
+                    ctx,
+                    tenant_id=self._scoped_tenant(qs.get("tenant_id", [None])[0]),
                 )
                 return self._send_json(status, body)
 
@@ -396,11 +504,18 @@ def create_server(
 
             # Tenants
             if path == "/v1/tenants":
-                status, body = handle_list_tenants(ctx, ctx.tenant_manager)
+                status, body = handle_list_tenants(
+                    ctx,
+                    ctx.tenant_manager,
+                    tenant_id=self._scoped_tenant(None),
+                )
                 return self._send_json(status, body)
             match = _TENANT_BUDGET_PATH.match(path)
             if match:
-                status, body = handle_tenant_budget(match.group(1), ctx.tenant_manager)
+                status, body = handle_tenant_budget(
+                    self._scoped_tenant(match.group(1)) or "default",
+                    ctx.tenant_manager,
+                )
                 return self._send_json(status, body)
 
             # Alerts
@@ -409,11 +524,14 @@ def create_server(
                 ack_val = None
                 if ack_raw is not None:
                     ack_val = ack_raw.lower() == "true"
+                limit = self._query_int(qs, "limit", 50, minimum=1, maximum=1000)
+                if limit is None:
+                    return
                 status, body = handle_list_alerts(
                     ctx.alert_manager,
                     severity=qs.get("severity", [None])[0],
                     acknowledged=ack_val,
-                    limit=int(qs.get("limit", ["50"])[0]),
+                    limit=limit,
                 )
                 return self._send_json(status, body)
 
@@ -421,7 +539,7 @@ def create_server(
             if path == "/v1/webhooks":
                 status, body = handle_list_webhooks(
                     ctx.webhook_manager,
-                    tenant_id=qs.get("tenant_id", [None])[0],
+                    tenant_id=self._scoped_tenant(qs.get("tenant_id", [None])[0]),
                 )
                 return self._send_json(status, body)
 
@@ -434,7 +552,9 @@ def create_server(
             if path == "/v1/secrets":
                 status, body = handle_list_secrets(
                     ctx.secret_manager,
-                    tenant_id=qs.get("tenant_id", ["default"])[0],
+                    tenant_id=self._scoped_tenant(
+                        qs.get("tenant_id", ["default"])[0]
+                    ) or "default",
                 )
                 return self._send_json(status, body)
 
@@ -444,7 +564,68 @@ def create_server(
 
         def _read_json_body(self) -> dict[str, Any] | None:
             """Read and parse JSON body. Returns None on failure (response sent)."""
-            length = int(self.headers.get("Content-Length") or 0)
+            if self.headers.get("Transfer-Encoding"):
+                self._send_json(
+                    400,
+                    error_envelope(
+                        "Transfer-Encoding is not supported",
+                        "invalid_request_error",
+                        None,
+                        "unsupported_transfer_encoding",
+                    ),
+                )
+                self.close_connection = True
+                return None
+            content_lengths = self.headers.get_all("Content-Length", failobj=[])
+            if len(content_lengths) > 1:
+                self._send_json(
+                    400,
+                    error_envelope(
+                        "multiple Content-Length headers are not allowed",
+                        "invalid_request_error",
+                        None,
+                        "invalid_content_length",
+                    ),
+                )
+                self.close_connection = True
+                return None
+            raw_length = self.headers.get("Content-Length")
+            try:
+                length = int(raw_length or 0)
+            except ValueError:
+                self._send_json(
+                    400,
+                    error_envelope(
+                        "invalid Content-Length header",
+                        "invalid_request_error",
+                        None,
+                        "invalid_content_length",
+                    ),
+                )
+                return None
+            if length < 0:
+                self._send_json(
+                    400,
+                    error_envelope(
+                        "Content-Length must not be negative",
+                        "invalid_request_error",
+                        None,
+                        "invalid_content_length",
+                    ),
+                )
+                return None
+            if length > config.max_request_body_bytes:
+                self._send_json(
+                    413,
+                    error_envelope(
+                        "request body exceeds the configured size limit",
+                        "invalid_request_error",
+                        None,
+                        "request_too_large",
+                    ),
+                )
+                self.close_connection = True
+                return None
             raw = self.rfile.read(length) if length else b""
             try:
                 parsed = json.loads(raw)
@@ -731,6 +912,7 @@ def create_server(
                 or bool(_CONFIG_KEY_PATH.match(path))
                 or bool(_SECRET_PATH.match(path))
                 or (path == "/health" and config.enable_health_endpoint)
+                or (path == "/ready" and config.enable_health_endpoint)
                 or (path == "/metrics" and config.enable_metrics_endpoint)
             )
             if known:
@@ -747,22 +929,170 @@ def create_server(
                 404, error_envelope("Not found", "invalid_request_error", None, "not_found")
             )
 
+        def _authenticate_and_authorize(self) -> tuple[bool, dict[str, str]]:
+            """Enforce authentication, rate limits, RBAC, and audit logging."""
+            path = self._path()
+            if path in {"/health", "/ready"}:
+                return True, {}
+
+            role: str | None = None
+            rate_headers: dict[str, str] = {}
+            if ctx.auth is not None:
+                headers = {name: value for name, value in self.headers.items()}
+                allowed, identity, rate_headers = ctx.auth.authenticate_with_metadata(headers)
+                self._response_extra_headers = rate_headers
+                if not allowed:
+                    if ctx.audit_logger is not None:
+                        ctx.audit_logger.log_api_call(
+                            actor_id=(identity or {}).get("key_id", "anonymous"),
+                            action=f"{self.command.lower()}:{path}",
+                            resource_type="api",
+                            resource_id=path,
+                            ip_address=self.client_address[0],
+                            details={
+                                "method": self.command,
+                                "reason": "rate_limited" if identity else "authentication_failed",
+                            },
+                            success=False,
+                        )
+                    if identity and identity.get("rate_limited"):
+                        self._send_json(
+                            429,
+                            error_envelope(
+                                "rate limit exceeded",
+                                "rate_limit_error",
+                                None,
+                                "rate_limit_exceeded",
+                            ),
+                            rate_headers,
+                        )
+                    else:
+                        self._send_json(
+                            401,
+                            error_envelope(
+                                "invalid or missing API key",
+                                "authentication_error",
+                                None,
+                                "invalid_api_key",
+                            ),
+                        )
+                    return False, rate_headers
+                if identity is not None:
+                    role = identity.get("role")
+                    ctx.request_local.tenant_id = identity.get("tenant_id", "default")
+                else:
+                    ctx.request_local.tenant_id = "default"
+                ctx.request_local.role = role
+
+            action = f"{self.command.lower()}:{path}"
+            if not self._check_rbac_and_audit(self.command, path, role, action):
+                return False, rate_headers
+            return True, rate_headers
+
+        def _dispatch(self, handler: Any) -> None:
+            """Run one request with shutdown accounting and sanitized failures."""
+            if not request_slots.acquire(blocking=False):
+                self._send_json(
+                    503,
+                    error_envelope(
+                        "server request capacity is exhausted",
+                        "server_error",
+                        None,
+                        "server_busy",
+                    ),
+                    {"Retry-After": "1"},
+                )
+                return
+            with shutdown_state.lock:
+                if shutdown_state.shutdown_requested:
+                    self._send_json(
+                        503,
+                        error_envelope(
+                            "gateway is shutting down",
+                            "server_error",
+                            None,
+                            "shutting_down",
+                        ),
+                    )
+                    request_slots.release()
+                    return
+                shutdown_state.active_requests += 1
+            try:
+                allowed, _ = self._authenticate_and_authorize()
+                if allowed:
+                    handler()
+            except (BrokenPipeError, ConnectionResetError):
+                self.close_connection = True
+            except Exception as exc:
+                if ctx.logger is not None:
+                    ctx.logger.error(
+                        "unhandled HTTP request failure",
+                        component="server",
+                        exception_type=type(exc).__name__,
+                    )
+                try:
+                    self._send_json(
+                        500,
+                        error_envelope(
+                            "internal server error",
+                            "server_error",
+                            None,
+                            "internal_error",
+                        ),
+                    )
+                except (BrokenPipeError, ConnectionResetError):
+                    self.close_connection = True
+            finally:
+                registry = getattr(ctx, "registry", None)
+                db = getattr(registry, "_db", None)
+                if db is not None and hasattr(db, "close_thread_connection"):
+                    db.close_thread_connection()
+                for attribute in ("tenant_id", "role"):
+                    if hasattr(ctx.request_local, attribute):
+                        delattr(ctx.request_local, attribute)
+                with shutdown_state.lock:
+                    shutdown_state.active_requests -= 1
+                request_slots.release()
+
+        def do_OPTIONS(self) -> None:
+            """Handle browser CORS preflight without requiring credentials."""
+            origin = self._cors_origin()
+            if origin is None:
+                return self._send_json(
+                    403,
+                    error_envelope(
+                        "origin is not allowed",
+                        "forbidden",
+                        None,
+                        "cors_origin_denied",
+                    ),
+                )
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+            self.send_header("Access-Control-Max-Age", "600")
+            self.send_header("Content-Length", "0")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+
         def do_GET(self) -> None:
-            self._handle_get()
+            self._dispatch(self._handle_get)
 
         def do_POST(self) -> None:
-            self._handle_post()
+            self._dispatch(self._handle_post)
 
         def do_DELETE(self) -> None:
-            self._handle_other()
+            self._dispatch(self._handle_other)
 
         def do_PUT(self) -> None:
-            self._handle_other()
+            self._dispatch(self._handle_other)
 
         def do_PATCH(self) -> None:
-            self._handle_other()
+            self._dispatch(self._handle_other)
 
-    server = ThreadingHTTPServer((config.host, config.port), Handler)
+    server = _NoeRelayHTTPServer((config.host, config.port), Handler)
 
     # Apply TLS if enabled
     if config.tls_enabled and config.tls_cert_path and config.tls_key_path:
@@ -790,14 +1120,18 @@ def _handle_admin_backup(ctx: PipelineContext) -> tuple[int, dict]:
         )
     try:
         db = ctx.registry._db  # type: ignore[attr-defined]
-        backup_path = db.backup(".noerelay/backup.db")
+        backup_path = db.backup(
+            str(Path(db._db_path).resolve().with_name(  # type: ignore[attr-defined]
+                f"{Path(db._db_path).stem}-backup.db"  # type: ignore[attr-defined]
+            ))
+        )
         return 200, {
             "status": "ok",
             "backup_path": backup_path,
         }
     except Exception as exc:
         return 500, error_envelope(
-            f"Backup failed: {exc}",
+            "Backup failed",
             "server_error",
             None,
             "backup_failed",
@@ -825,7 +1159,22 @@ def _handle_admin_restore(
         )
     try:
         db = ctx.registry._db  # type: ignore[attr-defined]
-        db.restore(backup_path)
+        base = Path(db._db_path).resolve().parent  # type: ignore[attr-defined]
+        candidate = Path(backup_path)
+        if not candidate.is_absolute():
+            candidate = (Path.cwd() / candidate).resolve()
+        else:
+            candidate = candidate.resolve()
+        try:
+            candidate.relative_to(base)
+        except ValueError:
+            return 400, error_envelope(
+                "backup_path must remain inside the configured database directory",
+                "invalid_request_error",
+                "backup_path",
+                "invalid_backup_path",
+            )
+        db.restore(str(candidate))
         return 200, {
             "status": "ok",
             "message": f"Restored from {backup_path}",
@@ -839,7 +1188,7 @@ def _handle_admin_restore(
         )
     except Exception as exc:
         return 500, error_envelope(
-            f"Restore failed: {exc}",
+            "Restore failed",
             "server_error",
             None,
             "restore_failed",
@@ -857,14 +1206,18 @@ def _handle_admin_export(ctx: PipelineContext) -> tuple[int, dict]:
         )
     try:
         db = ctx.registry._db  # type: ignore[attr-defined]
-        export_path = db.export_json(".noerelay/export.json")
+        export_path = db.export_json(
+            str(Path(db._db_path).resolve().with_name(  # type: ignore[attr-defined]
+                f"{Path(db._db_path).stem}-export.json"  # type: ignore[attr-defined]
+            ))
+        )
         return 200, {
             "status": "ok",
             "export_path": export_path,
         }
     except Exception as exc:
         return 500, error_envelope(
-            f"Export failed: {exc}",
+            "Export failed",
             "server_error",
             None,
             "export_failed",

@@ -1,0 +1,23 @@
+{
+  "receipt": {
+    "receipt_version": "1.0.0",
+    "run_id": "run-sample",
+    "organization_id": "org",
+    "project_id": "project",
+    "user_id": "user",
+    "contract_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "selected_candidate_id": "vendor/model",
+    "output_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "actual_cost_microusd": 1500,
+    "cost_source": "estimated",
+    "input_tokens": 500,
+    "output_tokens": 200,
+    "release_outcome": "accepted",
+    "ledger_head": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "receipt_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "algorithm": "Ed25519",
+  "signing_key_id": "key-sample-1",
+  "public_key_base64": "q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s=",
+  "signature_base64": "zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzQ=="
+}

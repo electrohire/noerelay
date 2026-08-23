@@ -21,6 +21,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from .webhooks import open_webhook_request, validate_webhook_url
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -29,11 +31,21 @@ def _now() -> str:
 class AlertManager:
     """Alerting system for proactive issue detection."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        max_alerts: int = 10000,
+        max_rules: int = 1000,
+        max_webhooks: int = 1000,
+    ) -> None:
+        if min(max_alerts, max_rules, max_webhooks) < 1:
+            raise ValueError("alert manager limits must be at least 1")
         self._alerts: list[dict[str, Any]] = []
         self._rules: list[dict[str, Any]] = []
         self._webhooks: list[dict[str, Any]] = []
         self._lock = threading.Lock()
+        self._max_alerts = max_alerts
+        self._max_rules = max_rules
+        self._max_webhooks = max_webhooks
 
     def add_rule(
         self,
@@ -53,6 +65,7 @@ class AlertManager:
         }
         with self._lock:
             self._rules.append(rule)
+            del self._rules[:-self._max_rules]
         return rule
 
     def trigger_alert(
@@ -75,6 +88,7 @@ class AlertManager:
         }
         with self._lock:
             self._alerts.append(alert)
+            del self._alerts[:-self._max_alerts]
         self._notify_webhooks(alert)
         return alert
 
@@ -112,6 +126,7 @@ class AlertManager:
         secret: str | None = None,
     ) -> dict[str, Any]:
         """Register a webhook for alert notifications."""
+        validate_webhook_url(url)
         webhook = {
             "webhook_id": f"webhook-{uuid.uuid4().hex}",
             "url": url,
@@ -121,7 +136,10 @@ class AlertManager:
         }
         with self._lock:
             self._webhooks.append(webhook)
-        return webhook
+            del self._webhooks[:-self._max_webhooks]
+        return {key: value for key, value in webhook.items() if key != "secret"} | {
+            "has_secret": bool(secret)
+        }
 
     def _notify_webhooks(self, alert: dict[str, Any]) -> None:
         """Notify all registered webhooks about an alert."""
@@ -146,8 +164,9 @@ class AlertManager:
                         payload.decode("utf-8"), webhook["secret"]
                     )
                     req.add_header("X-NoeRelay-Signature", signature)
-                urllib.request.urlopen(req, timeout=5)
-            except Exception:
+                with open_webhook_request(req, timeout=5):
+                    pass
+            except (OSError, ValueError):
                 pass  # Webhook delivery failures are non-fatal
 
     @staticmethod

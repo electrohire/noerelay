@@ -1,0 +1,7 @@
+{
+  "evidence_id": "evidence-1",
+  "test_id": "T-1",
+  "source_revision": "5a24249a9098a6c468da45d27a449fab380863b5",
+  "artifact_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "status": "observed_pass"
+}

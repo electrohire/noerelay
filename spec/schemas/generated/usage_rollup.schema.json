@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UsageRollup",
+  "type": "object",
+  "required": [
+    "by_organization",
+    "by_project",
+    "by_user"
+  ],
+  "properties": {
+    "by_organization": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/UsageTotals"
+      }
+    },
+    "by_project": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/UsageTotals"
+      }
+    },
+    "by_user": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/UsageTotals"
+      }
+    }
+  },
+  "definitions": {
+    "UsageTotals": {
+      "type": "object",
+      "required": [
+        "cost_microusd",
+        "input_tokens",
+        "output_tokens"
+      ],
+      "properties": {
+        "cost_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "input_tokens": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "output_tokens": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}

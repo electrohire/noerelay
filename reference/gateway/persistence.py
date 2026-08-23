@@ -12,8 +12,12 @@ from .runs import RunRecord, RunRegistry
 class FileRunRegistry(RunRegistry):
     """File-based run registry that persists runs to disk."""
 
-    def __init__(self, storage_dir: str = ".noerelay/runs") -> None:
-        super().__init__()
+    def __init__(
+        self,
+        storage_dir: str = ".noerelay/runs",
+        max_runs: int = 10000,
+    ) -> None:
+        super().__init__(max_runs=max_runs)
         self._storage_dir = Path(storage_dir)
         self._storage_dir.mkdir(parents=True, exist_ok=True)
         self._load_existing()
@@ -27,7 +31,9 @@ class FileRunRegistry(RunRegistry):
                 continue
             record = self._record_from_dict(data)
             if record is not None and record.run_id:
-                self._runs[record.run_id] = record
+                with self._lock:
+                    self._runs[record.run_id] = record
+                    self._trim_locked()
 
     def _record_from_dict(self, data: dict[str, Any]) -> RunRecord | None:
         if not isinstance(data, dict):
@@ -35,6 +41,7 @@ class FileRunRegistry(RunRegistry):
         return RunRecord(
             run_id=str(data.get("run_id", "")),
             trace_id=str(data.get("trace_id", "")),
+            tenant_id=str(data.get("tenant_id", "default")),
             task_id=data.get("task_id"),
             contract=data.get("contract"),
             decision=data.get("decision"),
@@ -55,6 +62,7 @@ class FileRunRegistry(RunRegistry):
         return {
             "run_id": record.run_id,
             "trace_id": record.trace_id,
+            "tenant_id": record.tenant_id,
             "task_id": record.task_id,
             "contract": record.contract,
             "decision": record.decision,

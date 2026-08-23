@@ -699,7 +699,8 @@ class ExportImportTests(unittest.TestCase):
     def tearDownClass(cls):
         cls._db.close()
         Path(".noerelay/test_export_import.db").unlink(missing_ok=True)
-        Path(".noerelay/export.json").unlink(missing_ok=True)
+        Path(".noerelay/test_export_import-export.json").unlink(missing_ok=True)
+        Path(".noerelay/test_export_import-backup.db").unlink(missing_ok=True)
         Path(".noerelay/backup.db").unlink(missing_ok=True)
 
     def setUp(self):

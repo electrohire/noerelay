@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Candidate",
+  "type": "object",
+  "required": [
+    "acceptance_lcb_ppm",
+    "available",
+    "candidate_id",
+    "capabilities",
+    "cost",
+    "latency_p95_ms",
+    "maximum_data_class",
+    "openrouter_model_id",
+    "provider",
+    "supports_independent_verification"
+  ],
+  "properties": {
+    "acceptance_lcb_ppm": {
+      "description": "Calibrated lower confidence bound, in millionths (0..=1_000_000).",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "available": {
+      "type": "boolean"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "cost": {
+      "$ref": "#/definitions/CostBreakdown"
+    },
+    "latency_p95_ms": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "maximum_data_class": {
+      "$ref": "#/definitions/DataClass"
+    },
+    "openrouter_model_id": {
+      "type": "string"
+    },
+    "provider": {
+      "type": "string"
+    },
+    "supports_independent_verification": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "CostBreakdown": {
+      "type": "object",
+      "required": [
+        "expected_fallback_microusd",
+        "expected_human_review_microusd",
+        "expected_retry_microusd",
+        "inference_microusd",
+        "infrastructure_microusd",
+        "tools_microusd",
+        "verification_microusd"
+      ],
+      "properties": {
+        "expected_fallback_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "expected_human_review_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "expected_retry_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "inference_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "infrastructure_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "tools_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "verification_microusd": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "DataClass": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    }
+  }
+}

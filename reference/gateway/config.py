@@ -11,9 +11,12 @@ caller must not bind the server when configuration fails.
 from __future__ import annotations
 
 import os
+import ipaddress
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .compression import CompressionConfig
 
@@ -68,6 +71,8 @@ def _parse_float(
         parsed = float(raw)
     except ValueError:
         raise ConfigError(f"{name} must be a number; got {raw!r}") from None
+    if not math.isfinite(parsed):
+        raise ConfigError(f"{name} must be a finite number; got {raw!r}")
     if minimum is not None:
         if exclusive and parsed <= minimum:
             raise ConfigError(f"{name} must be > {minimum}; got {parsed}")
@@ -87,6 +92,16 @@ def _parse_bool(environ: Mapping[str, str], name: str, default: bool) -> bool:
     if raw not in {"0", "1"}:
         raise ConfigError(f"{name} must be '0' or '1'; got {raw!r}")
     return raw == "1"
+
+
+def _is_loopback_host(host: str) -> bool:
+    """Return whether *host* binds only to the local machine."""
+    if host.casefold() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 @dataclass(frozen=True)
@@ -129,6 +144,17 @@ class GatewayConfig:
     tls_cert_path: str | None
     tls_key_path: str | None
     compression: CompressionConfig
+    auth_required: bool = False
+    cors_allowed_origins: tuple[str, ...] = (
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+    )
+    max_request_body_bytes: int = 4 * 1024 * 1024
+    run_retention_max: int = 10000
+    request_timeout_seconds: float = 30.0
+    max_concurrent_requests: int = 100
+    production_mode: bool = False
+    trusted_proxy_tls: bool = False
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "GatewayConfig":
@@ -190,6 +216,11 @@ class GatewayConfig:
         external_base_url = _value(
             env, "NOERELAY_EXTERNAL_BASE_URL", _DEFAULT_EXTERNAL_BASE_URL
         ).rstrip("/")
+        external_url = urlsplit(external_base_url)
+        if external_url.scheme not in {"http", "https"} or not external_url.hostname:
+            raise ConfigError(
+                "NOERELAY_EXTERNAL_BASE_URL must be an absolute http or https URL"
+            )
         openrouter_base_url = _value(
             env, "OPENROUTER_BASE_URL", _DEFAULT_OPENROUTER_BASE_URL
         ).rstrip("/")
@@ -199,6 +230,62 @@ class GatewayConfig:
         openrouter_app_title = _value(env, "OPENROUTER_APP_TITLE", "NoeRelay")
 
         auth_api_keys = _value(env, "NOERELAY_AUTH_API_KEYS", "") or None
+        auth_required = _parse_bool(
+            env,
+            "NOERELAY_AUTH_REQUIRED",
+            not _is_loopback_host(host),
+        )
+        if not _is_loopback_host(host) and not auth_required:
+            raise ConfigError(
+                "NOERELAY_AUTH_REQUIRED cannot be disabled for a non-loopback bind"
+            )
+        if auth_required and not auth_api_keys:
+            raise ConfigError(
+                "NOERELAY_AUTH_API_KEYS must contain at least one key when "
+                "authentication is required; non-loopback binds require "
+                "authentication by default"
+            )
+        cors_raw = _value(
+            env,
+            "NOERELAY_CORS_ALLOWED_ORIGINS",
+            "http://127.0.0.1:3000,http://localhost:3000",
+        )
+        cors_allowed_origins = tuple(
+            origin.strip().rstrip("/")
+            for origin in cors_raw.split(",")
+            if origin.strip()
+        )
+        if "*" in cors_allowed_origins:
+            raise ConfigError(
+                "NOERELAY_CORS_ALLOWED_ORIGINS must list explicit origins; "
+                "wildcard access is not supported"
+            )
+        max_request_body_bytes = _parse_int(
+            env,
+            "NOERELAY_MAX_REQUEST_BODY_BYTES",
+            4 * 1024 * 1024,
+            minimum=1024,
+            maximum=64 * 1024 * 1024,
+        )
+        run_retention_max = _parse_int(
+            env,
+            "NOERELAY_RUN_RETENTION_MAX",
+            10000,
+            minimum=1,
+        )
+        request_timeout_seconds = _parse_float(
+            env,
+            "NOERELAY_REQUEST_TIMEOUT_SECONDS",
+            30.0,
+            minimum=1.0,
+        )
+        max_concurrent_requests = _parse_int(
+            env,
+            "NOERELAY_MAX_CONCURRENT_REQUESTS",
+            100,
+            minimum=1,
+            maximum=10000,
+        )
         rate_limit_rate = _parse_float(
             env, "NOERELAY_RATE_LIMIT_RATE", 10.0, minimum=0.0
         )
@@ -263,6 +350,8 @@ class GatewayConfig:
             env, "NOERELAY_LOG_FILE_PATH", ".noerelay/noerelay.log"
         )
         tls_enabled = _parse_bool(env, "NOERELAY_TLS_ENABLED", False)
+        trusted_proxy_tls = _parse_bool(env, "NOERELAY_TRUSTED_PROXY_TLS", False)
+        production_mode = _parse_bool(env, "NOERELAY_PRODUCTION_MODE", False)
         tls_cert_path_raw = _value(env, "NOERELAY_TLS_CERT_PATH", "") or None
         tls_cert_path: str | None = None
         if tls_cert_path_raw:
@@ -277,6 +366,60 @@ class GatewayConfig:
             tls_key_path = str(
                 key_path if key_path.is_absolute() else ROOT / key_path
             )
+
+        if bool(tls_cert_path) != bool(tls_key_path):
+            raise ConfigError(
+                "NOERELAY_TLS_CERT_PATH and NOERELAY_TLS_KEY_PATH must be set together"
+            )
+        if tls_enabled:
+            if not tls_cert_path or not tls_key_path:
+                raise ConfigError(
+                    "NOERELAY_TLS_ENABLED=1 requires both TLS certificate and key paths"
+                )
+            if not Path(tls_cert_path).is_file() or not Path(tls_key_path).is_file():
+                raise ConfigError("configured TLS certificate and key files must exist")
+
+        if production_mode:
+            configured_keys = [
+                key.strip() for key in (auth_api_keys or "").split(",") if key.strip()
+            ]
+            if not auth_required or not configured_keys:
+                raise ConfigError(
+                    "NOERELAY_PRODUCTION_MODE=1 requires API-key authentication"
+                )
+            if any(len(key) < 32 for key in configured_keys):
+                raise ConfigError(
+                    "production API keys must contain at least 32 characters"
+                )
+            master_key = _value(env, "NOERELAY_MASTER_KEY", "")
+            if len(master_key) < 32:
+                raise ConfigError(
+                    "NOERELAY_PRODUCTION_MODE=1 requires a master key of at least 32 characters"
+                )
+            if not database_enabled:
+                raise ConfigError(
+                    "NOERELAY_PRODUCTION_MODE=1 requires SQLite persistence"
+                )
+            if openrouter_mode != "live":
+                raise ConfigError(
+                    "NOERELAY_PRODUCTION_MODE=1 requires live inference mode"
+                )
+            if external_url.scheme != "https":
+                raise ConfigError(
+                    "NOERELAY_PRODUCTION_MODE=1 requires an HTTPS external base URL"
+                )
+            if not tls_enabled and not trusted_proxy_tls:
+                raise ConfigError(
+                    "production mode requires built-in TLS or an explicitly trusted TLS proxy"
+                )
+            insecure_origins = [
+                origin for origin in cors_allowed_origins
+                if urlsplit(origin).scheme != "https"
+            ]
+            if insecure_origins:
+                raise ConfigError(
+                    "production CORS origins must use HTTPS"
+                )
 
         compression = CompressionConfig.from_env(env)
 
@@ -317,4 +460,12 @@ class GatewayConfig:
             tls_cert_path=tls_cert_path,
             tls_key_path=tls_key_path,
             compression=compression,
+            auth_required=auth_required,
+            cors_allowed_origins=cors_allowed_origins,
+            max_request_body_bytes=max_request_body_bytes,
+            run_retention_max=run_retention_max,
+            request_timeout_seconds=request_timeout_seconds,
+            max_concurrent_requests=max_concurrent_requests,
+            production_mode=production_mode,
+            trusted_proxy_tls=trusted_proxy_tls,
         )

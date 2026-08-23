@@ -1,0 +1,25 @@
+[package]
+name = "noerelay-store"
+description = "Durable PostgreSQL authority storage for NoeRelay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+noerelay-core = { path = "../noerelay-core" }
+argon2 = { version = "0.5", features = ["std"] }
+async-trait = "0.1"
+base64.workspace = true
+chrono.workspace = true
+rand = "0.8"
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+uuid.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

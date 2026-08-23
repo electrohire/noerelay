@@ -76,7 +76,7 @@
         }
       }
     },
-    "/v1/epr/runs/{run_id}": {
+    "/v1/noerelay/runs/{run_id}/receipt": {
       "get": {
         "operationId": "getEvidenceReceipt",
         "parameters": [
@@ -89,14 +89,40 @@
         ],
         "responses": {
           "200": {
-            "description": "Evidence receipt for a completed or escalated run.",
+            "description": "Ed25519-signed evidence receipt for an accepted run.",
             "content": {
               "application/json": {
-                "schema": {"$ref": "./schemas/evidence-receipt.schema.json"}
+                "schema": {"$ref": "./schemas/signed-run-receipt.schema.json"}
               }
             }
           },
           "404": {"description": "Run not found."}
+        }
+      }
+    },
+    "/v1/noerelay/reports/costs": {
+      "get": {
+        "operationId": "getCostReport",
+        "responses": {
+          "200": {
+            "description": "Authenticated organization/project/user request, token, and integer micro-USD rollups."
+          }
+        }
+      }
+    },
+    "/v1/noerelay/governance/release-gate": {
+      "post": {
+        "operationId": "evaluateGovernanceReleaseGate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {"schema": {"type": "object"}}
+          }
+        },
+        "responses": {
+          "200": {"description": "Every mandatory requirement has linked observed passing evidence."},
+          "422": {"description": "The trace graph is structurally invalid."},
+          "424": {"description": "A mandatory requirement lacks observed passing evidence."}
         }
       }
     }
@@ -105,9 +131,9 @@
     "schemas": {
       "model": {
       "type": "object",
-      "required": ["id", "object", "created", "owned_by"],
+      "required": ["id", "object", "owned_by"],
       "properties": {
-        "id": {"const": "noerelay/epr-1"},
+        "id": {"type": "string"},
         "object": {"const": "model"},
         "created": {"type": "integer"},
         "owned_by": {"type": "string"}

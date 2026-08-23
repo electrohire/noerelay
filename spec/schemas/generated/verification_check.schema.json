@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VerificationCheck",
+  "type": "object",
+  "required": [
+    "check_id",
+    "depends_on",
+    "kind"
+  ],
+  "properties": {
+    "check_id": {
+      "type": "string"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "kind": {
+      "$ref": "#/definitions/CheckKind"
+    },
+    "verifier_family": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "CheckKind": {
+      "type": "string",
+      "enum": [
+        "schema",
+        "policy",
+        "deterministic_acceptance",
+        "independent_review",
+        "human_approval"
+      ]
+    }
+  }
+}

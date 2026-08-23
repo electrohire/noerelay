@@ -12,5 +12,9 @@ spec:
   endpoints:
   - port: http
     path: /metrics
+    authorization:
+      credentials:
+        name: noerelay-secrets
+        key: metrics-api-key
     interval: 30s
     scrapeTimeout: 10s

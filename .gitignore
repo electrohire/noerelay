@@ -48,3 +48,5 @@ artifacts/
 
 # Rust build artifacts
 rtk/target/
+# Rust build output
+/target/

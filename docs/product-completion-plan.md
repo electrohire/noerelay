@@ -1,10 +1,12 @@
 # NoeRelay v1 Product Completion Plan
 
-**Status:** Proposed implementation baseline
+**Status:** Superseded implementation baseline; retained for historical detail
 
 **Target:** A production-ready `noerelay/epr-1` virtual model with a complete basic core and governed extension points
 
 **Planning assumption:** Four core engineers, part-time security/product support, approximately 20–22 weeks to general availability
+
+> The authoritative requirements are now [`requirements.md`](requirements.md), with release gates in [`verification-matrix.md`](verification-matrix.md). ADR-0001 replaces the language allocation below: Rust owns release authority, Python supplies bindings/evaluation extensions, and Go is limited to justified protocol/operational adapters.
 
 **Meaning of “100%”:** Every v1 requirement and launch gate in this document is satisfied. It does not mean every future research capability has been implemented.
 
@@ -119,12 +121,12 @@ flowchart TB
 
 | Area | v1 choice | Reason and future seam |
 |---|---|---|
-| Production control plane | Go 1.25+ | Best fit for high-concurrency HTTP/SSE, cancellation, durable workers, low idle cost, operational simplicity, and the official A2A Go SDK. Use one modular Go codebase for the API, policy, router, ledger, and workers. |
-| Python boundary | Python 3.12+ SDK and isolated evaluation/analysis workers | Preserve the existing reference kernel as a conformance oracle; use Python where Hugging Face, evaluation, training, notebooks, or model-specific libraries materially help. Python is not the release-authority hot path. |
+| Production control plane | Rust stable | Owns the API, canonical state, policy, routing, cost/budget authority, verification orchestration, epistemic state, ledger, and release decisions with a memory-safe, explicit authority boundary. |
+| Python boundary | PyO3-generated Python bindings plus isolated evaluation/analysis workers | Preserve the existing reference kernel as a conformance oracle; use Python where Hugging Face, evaluation, training, notebooks, or model-specific libraries materially help. Python is not the release-authority hot path. |
 | Web and client | TypeScript | Use for the operator console, generated browser/Node SDK, and AG-UI integration. It does not own policy or epistemic authority. |
-| Selective systems modules | Rust, only after measurement | Reserve for a sandbox host, canonicalization/cryptographic verifier, or native media module if profiling or threat analysis justifies it. Do not create a parallel Rust backend in v1. |
-| Internal contracts | Versioned Protocol Buffers plus JSON Schema/OpenAPI projections | Generate Go, Python, and TypeScript types from one schema lineage. Use gRPC or Connect for isolated internal workers; keep public compatibility at HTTP/JSON/SSE. |
-| API | Go HTTP service with generated OpenAPI fixtures | Supports streaming, context cancellation, middleware, compatibility testing, and a compact statically linked deployment. Keep HTTP framework types outside domain modules. |
+| Go adapters | Go only where its protocol ecosystem is materially advantageous | Initially reserved for the official A2A client/server adapter. It is an untrusted adapter to Rust authority and does not own policy or ledger acceptance. |
+| Internal contracts | Versioned Protocol Buffers plus JSON Schema/OpenAPI projections | Generate Rust, Python, Go, and TypeScript types from one schema lineage. Use gRPC or Connect for isolated internal workers; keep public compatibility at HTTP/JSON/SSE. |
+| API | Rust HTTP service with generated OpenAPI fixtures | Supports streaming, cancellation, middleware, compatibility testing, and a compact deployment while keeping framework types outside domain modules. |
 | Execution model | Transactional PostgreSQL run/step tables, outbox, leases, and isolated workers | Delivers durable basics with one primary datastore. A `WorkflowEngine` port permits Temporal or another durable engine later. |
 | Primary storage | PostgreSQL with JSONB and immutable event tables | Strong transactions for contracts, policy versions, runs, claims, and ledger linkage. |
 | Artifact storage | S3-compatible object storage | Stores images, large tool outputs, benchmark bundles, signed receipts, and replay artifacts by content hash. |
@@ -140,23 +142,23 @@ flowchart TB
 
 ### 4.2 Language decision
 
-| Criterion | Go | Rust | Python | TypeScript |
+| Criterion | Rust | Go | Python | TypeScript |
 |---|---|---|---|---|
 | Concurrent API, streaming, cancellation, workers | Excellent | Excellent | Adequate | Good |
-| Memory/runtime safety | Strong, garbage collected | Strongest, ownership checked | Runtime checked | Runtime checked |
-| Delivery speed for this control plane | Excellent | Moderate | Good initially, weaker under mixed concurrency | Good |
-| AI/evaluation ecosystem | Adequate through HTTP/protocols | Limited | Excellent | Good |
+| Memory/runtime safety | Strongest, ownership checked | Strong, garbage collected | Runtime checked | Runtime checked |
+| Delivery speed for this control plane | Moderate | Excellent | Good initially, weaker under mixed concurrency | Good |
+| AI/evaluation ecosystem | Limited | Adequate through HTTP/protocols | Excellent | Good |
 | Deployment and idle footprint | Excellent | Excellent | Moderate | Good |
-| NoeRelay role | **Primary production language** | Targeted hardened modules | SDK, reference, eval and research workers | Console and client SDK |
+| NoeRelay role | **Primary production and release-authority language** | Narrow protocol/operations adapters | Bindings, reference, eval and research workers | Console and client SDK |
 
-Go is the primary language because NoeRelay is principally a policy-constrained distributed-systems product, not a numerical-computing product. Rust would improve maximum control over memory and sandbox internals but would slow the initial product unnecessarily if used everywhere. Python remains first-class without becoming the architectural center: customers receive a Python SDK, researchers retain the existing executable specification, and evaluation/deep-analysis workers can use the AI ecosystem behind versioned process boundaries.
+Rust is the primary language because policy, budget, tool authorization, ledger integrity, and release decisions form one trusted computing boundary. Rust provides explicit ownership and a compact memory-safe runtime for that boundary. Python remains first-class without becoming the architectural center: customers receive bindings to the same core, researchers retain the existing executable specification, and evaluation/deep-analysis workers can use the AI ecosystem behind versioned process boundaries. Go is used only for justified adapters such as the official A2A ecosystem.
 
 Rules for keeping the polyglot design coherent:
 
-- Go owns canonical run state, authorization, task contracts, routing, budgets, verification orchestration, ledger writes, release decisions, and public serving.
+- Rust owns canonical run state, authorization, task contracts, routing, budgets, verification orchestration, ledger writes, release decisions, and public serving.
 - Python workers receive minimum necessary immutable inputs and return typed proposals, measurements, or artifacts. They cannot activate policy or mark a claim accepted.
 - TypeScript consumes generated contracts and AG-UI events; browser code never receives provider secrets or authority-bearing internal fields.
-- Rust enters only through an ADR containing a benchmark or threat-model finding, a narrow stable interface, and an owner. A second general backend is prohibited in v1.
+- Go services require an ADR, a narrow versioned interface, and an owner. They cannot become a second authority backend.
 - One schema lineage generates language bindings. No language may maintain a hand-written competing definition of a task, claim, evidence receipt, or policy decision.
 
 ### 4.3 Canonical internal request model
@@ -589,7 +591,7 @@ One person may cover multiple roles, but production changes to normative policy,
 
 ## 16. First ten implementation pull requests
 
-1. Go workspace and service/worker entry points, protobuf lineage, Python/TypeScript workspaces, dependency locks, multi-language quality/security CI, and ADR template.
+1. Rust workspace and service/worker entry points, schema lineage, PyO3 bindings, Python/TypeScript workspaces, dependency locks, multi-language quality/security CI, and ADR template.
 2. PostgreSQL schema and migrations for tenants, projects, contracts, runs, steps, and immutable revisions.
 3. API-key authentication, tenant middleware, idempotency, rate-limit interfaces, and negative isolation tests.
 4. Canonical request IR plus `/v1/models` and non-streaming `/v1/chat/completions` skeleton.

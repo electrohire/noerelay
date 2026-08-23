@@ -1,0 +1,31 @@
+# Legacy Python conformance-oracle image. The production image is built from Dockerfile.
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+COPY reference/ ./reference/
+COPY spec/ ./spec/
+COPY examples/ ./examples/
+
+FROM python:3.12-slim AS runtime
+RUN groupadd -r noerelay && useradd -r -g noerelay -d /app -s /sbin/nologin noerelay
+WORKDIR /app
+ENV PYTHONPATH=/app/reference \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    NOERELAY_GATEWAY_HOST=0.0.0.0 \
+    NOERELAY_OPENROUTER_MODE=stub \
+    NOERELAY_DATABASE_ENABLED=1 \
+    NOERELAY_DATABASE_PATH=/data/noerelay.db \
+    NOERELAY_LOG_OUTPUT=stdout
+COPY --from=builder --chown=noerelay:noerelay /app/reference/ ./reference/
+COPY --from=builder --chown=noerelay:noerelay /app/spec/ ./spec/
+COPY --from=builder --chown=noerelay:noerelay /app/examples/ ./examples/
+COPY --chown=noerelay:noerelay scripts/ ./scripts/
+RUN mkdir -p /data && chown noerelay:noerelay /data
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=3)"
+VOLUME ["/data"]
+USER noerelay
+CMD ["python", "-m", "gateway"]
+

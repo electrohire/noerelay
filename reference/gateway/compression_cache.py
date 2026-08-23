@@ -36,6 +36,10 @@ class CompressionCache:
     """
 
     def __init__(self, max_size: int = 100, ttl_seconds: int = 300) -> None:
+        if max_size < 1:
+            raise ValueError("max_size must be at least 1")
+        if ttl_seconds < 0:
+            raise ValueError("ttl_seconds must not be negative")
         self._max_size = max_size
         self._ttl_seconds = ttl_seconds
         self._lock = threading.Lock()

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ToolDecision",
+  "type": "string",
+  "enum": [
+    "allow",
+    "unknown_tool",
+    "not_granted",
+    "organization_denied",
+    "project_denied",
+    "data_policy",
+    "input_too_large",
+    "egress_denied",
+    "idempotency_required",
+    "approval_required"
+  ]
+}

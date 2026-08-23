@@ -39,11 +39,15 @@ class SIEMIntegration:
         endpoint: str | None = None,
         api_key: str | None = None,
         format: str = "json",
+        max_buffer_size: int = 10000,
     ) -> None:
+        if max_buffer_size < 1:
+            raise ValueError("max_buffer_size must be at least 1")
         self._endpoint = endpoint
         self._api_key = api_key
         self._format = format
         self._buffer: list[dict[str, Any]] = []
+        self._max_buffer_size = max_buffer_size
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------
@@ -56,7 +60,10 @@ class SIEMIntegration:
         Returns True if shipped successfully, False otherwise.
         """
         if not self._endpoint:
-            self._buffer.append(log_entry)
+            with self._lock:
+                self._buffer.append(log_entry)
+                if len(self._buffer) > self._max_buffer_size:
+                    del self._buffer[: len(self._buffer) - self._max_buffer_size]
             return True  # Buffered, not shipped
 
         payload = self._format_log_entry(log_entry)

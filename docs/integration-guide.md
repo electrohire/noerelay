@@ -144,20 +144,46 @@ curl -X POST http://127.0.0.1:8080/v1/chat/completions \
 ### 6. LangChain Integration
 
 ```python
-from langchain.chat_models import ChatOpenAI
+import os
+
+from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
-    openai_api_base="http://127.0.0.1:8080/v1",
-    openai_api_key="your-api-key",
-    model_name="noerelay/epr-1"
+    base_url="http://127.0.0.1:8080/v1",
+    api_key=os.environ.get("NOERELAY_API_KEY", "any-value"),
+    model="noerelay/epr-1",
 )
 
-response = llm.predict("Hello!")
+response = llm.invoke("Hello!")
+print(response.content)
 ```
 
 ---
 
-### 7. Docker Compose with Open WebUI
+### 7. LlamaIndex Integration
+
+Install the optional client integration with `python -m pip install llama-index-llms-openai`, then point it at NoeRelay:
+
+```python
+import os
+
+from llama_index.llms.openai import OpenAI
+
+llm = OpenAI(
+    api_base="http://127.0.0.1:8080/v1",
+    api_key=os.environ.get("NOERELAY_API_KEY", "any-value"),
+    model="noerelay/epr-1",
+)
+
+response = llm.complete("What is 2+2?")
+print(response.text)
+```
+
+The imported package is an optional client dependency, not a NoeRelay runtime dependency. The class name reflects the compatible protocol adapter; NoeRelay still rejects OpenAI upstream model routes.
+
+---
+
+### 8. Docker Compose with Open WebUI
 
 ```yaml
 # docker-compose.override.yml
@@ -175,7 +201,9 @@ services:
 
 ---
 
-### 8. API Endpoints Reference
+### 9. API Endpoints Reference
+
+The endpoints in `spec/openapi.json` are the current Rust gateway contract. The additional routes below belong to the legacy Python reference server and may evolve or be replaced before a production release.
 
 | Endpoint | Method | Description |
 |---|---|---|
@@ -230,7 +258,7 @@ services:
 
 ---
 
-### 9. Governance Fields
+### 10. Governance Fields
 
 When sending a chat completion request, you can include a `governance` object:
 
@@ -243,7 +271,7 @@ When sending a chat completion request, you can include a `governance` object:
 
 ---
 
-### 10. Response Format
+### 11. Response Format
 
 A successful chat completion response includes standard OpenAI fields plus
 NoeRelay-specific metadata:

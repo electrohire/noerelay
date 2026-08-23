@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CanonicalRequest",
+  "type": "object",
+  "required": [
+    "data_class",
+    "messages",
+    "request_id",
+    "risk",
+    "scope"
+  ],
+  "properties": {
+    "acceptance_criteria": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowed_agents": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowed_tools": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "data_class": {
+      "$ref": "#/definitions/DataClass"
+    },
+    "max_cost_microusd": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "max_latency_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Message"
+      }
+    },
+    "metadata": {
+      "default": {},
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "required_capabilities": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "risk": {
+      "$ref": "#/definitions/RiskClass"
+    },
+    "scope": {
+      "$ref": "#/definitions/IdentityScope"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "DataClass": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    },
+    "IdentityScope": {
+      "type": "object",
+      "required": [
+        "environment_id",
+        "organization_id",
+        "project_id",
+        "session_id",
+        "user_id"
+      ],
+      "properties": {
+        "environment_id": {
+          "type": "string"
+        },
+        "organization_id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Message": {
+      "type": "object",
+      "required": [
+        "content",
+        "role"
+      ],
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "$ref": "#/definitions/MessageRole"
+        },
+        "tool_call_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "MessageRole": {
+      "type": "string",
+      "enum": [
+        "system",
+        "developer",
+        "user",
+        "assistant",
+        "tool"
+      ]
+    },
+    "RiskClass": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    }
+  }
+}

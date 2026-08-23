@@ -1,0 +1,6 @@
+[advisories]
+# SQLx 0.8.6 records its optional MySQL/RSA dependency in Cargo.lock even
+# though NoeRelay disables default features and compiles only PostgreSQL.
+# `cargo tree -i rsa --target all` is empty for this workspace. Keep this
+# narrow exception until the upstream lock graph no longer contains it.
+ignore = ["RUSTSEC-2023-0071"]

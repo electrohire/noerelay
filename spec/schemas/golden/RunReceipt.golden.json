@@ -1,0 +1,17 @@
+{
+  "receipt_version": "1.0.0",
+  "run_id": "run-sample",
+  "organization_id": "org",
+  "project_id": "project",
+  "user_id": "user",
+  "contract_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "selected_candidate_id": "vendor/model",
+  "output_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "actual_cost_microusd": 1500,
+  "cost_source": "estimated",
+  "input_tokens": 500,
+  "output_tokens": 200,
+  "release_outcome": "accepted",
+  "ledger_head": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "receipt_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+}

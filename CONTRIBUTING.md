@@ -46,3 +46,42 @@ Aggregate benchmark improvement does not justify a regression in a governed high
 ## Reporting vulnerabilities
 
 Do not open a public issue for a suspected vulnerability. Follow [SECURITY.md](SECURITY.md).
+
+## Release notes template
+
+Every draft or release candidate must update `CHANGELOG.md` and include release notes using this template:
+
+```markdown
+# NoeRelay <version> — <YYYY-MM-DD>
+
+## Summary
+<Who this is for and the outcome of the release.>
+
+## Added
+- <New user-visible capability.>
+
+## Changed
+- <Behavior or compatibility change.>
+
+## Fixed
+- <Defect and observable impact.>
+
+## Security
+- <Security control or advisory; omit sensitive exploit details until coordinated disclosure.>
+
+## Migration
+- <Required configuration, database, API, or deployment action; write “None” if not applicable.>
+
+## Compatibility
+- Python: <supported versions>
+- API: <compatible, additive, or breaking>
+- Ledger/schema: <compatibility statement>
+
+## Known limitations
+- <Unresolved limitation and safe workaround.>
+
+## Verification evidence
+- <Exact test, build, and smoke-test commands and results.>
+```
+
+Do not publish a release until the version and date agree across the changelog, README, package/runtime metadata, OpenAPI document, threat model, and release artifact names.

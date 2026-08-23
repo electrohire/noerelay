@@ -52,6 +52,10 @@ from gateway.fallback import FallbackRecorder
 from gateway.online_learning import CanaryTrafficRouter, PolicyVersionManager
 from gateway.provenance import ProvenanceMapper
 from gateway.statemachine import TransitionError, VerificationStateMachine
+from gateway.auth import AuthMiddleware
+from gateway.rate_limit import PerKeyRateLimiter
+from gateway.rbac import RBACMiddleware
+from gateway.cache import ResponseCache
 
 
 def _sse_data_lines(raw: str) -> list[str]:
@@ -128,10 +132,19 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             GatewayConfig.from_env({"NOERELAY_DEFAULT_MAX_LATENCY_MS": "0"})
 
+    def test_non_loopback_bind_requires_api_key(self):
+        with self.assertRaises(ConfigError):
+            GatewayConfig.from_env({"NOERELAY_GATEWAY_HOST": "0.0.0.0"})
+
+    def test_wildcard_cors_origin_is_rejected(self):
+        with self.assertRaises(ConfigError):
+            GatewayConfig.from_env({"NOERELAY_CORS_ALLOWED_ORIGINS": "*"})
+
     def test_custom_values_are_parsed(self):
         config = GatewayConfig.from_env(
             {
                 "NOERELAY_GATEWAY_HOST": "0.0.0.0",
+                "NOERELAY_AUTH_API_KEYS": "test-key",
                 "NOERELAY_GATEWAY_PORT": "9000",
                 "NOERELAY_DEFAULT_MAX_COST_USD": "1.5",
                 "NOERELAY_DEFAULT_MAX_LATENCY_MS": "30000",
@@ -145,6 +158,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.default_max_latency_ms, 30000)
         self.assertEqual(config.external_base_url, "https://relay.example.com")
         self.assertTrue(config.live_tests)
+        self.assertTrue(config.auth_required)
 
     def test_relative_paths_are_resolved_against_repo_root(self):
         config = GatewayConfig.from_env(
@@ -513,7 +527,17 @@ class StubClientTests(unittest.TestCase):
         }
         cls.inference_request = {
             "messages": [{"role": "user", "content": "Hello world"}],
-            "passthrough": {"temperature": 0.2, "max_tokens": 100},
+            "passthrough": {
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 100,
+                "stop": ["END"],
+                "n": 1,
+                "presence_penalty": 0.1,
+                "frequency_penalty": -0.1,
+                "logit_bias": {"42": 1},
+                "user": "sdk-test",
+            },
         }
 
     def test_payload_has_explicit_model_and_provider_block(self):
@@ -532,6 +556,18 @@ class StubClientTests(unittest.TestCase):
         self.assertEqual(payload["messages"], self.inference_request["messages"])
         self.assertEqual(payload["temperature"], 0.2)
         self.assertEqual(payload["max_tokens"], 100)
+        for field in (
+            "top_p",
+            "stop",
+            "n",
+            "presence_penalty",
+            "frequency_penalty",
+            "logit_bias",
+            "user",
+        ):
+            self.assertEqual(
+                payload[field], self.inference_request["passthrough"][field]
+            )
 
     def test_payload_rejects_forbidden_model(self):
         plan = {**self.selected_plan, "model_id": "openai/gpt-4o"}
@@ -890,6 +926,26 @@ class GatewayIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(status, 400)
         self.assertEqual(body["error"]["code"], "missing_field")
+
+    def test_invalid_standard_parameter_returns_400(self):
+        status, body = self._post(
+            "/v1/chat/completions",
+            {
+                "model": "noerelay/epr-1",
+                "messages": [{"role": "user", "content": "Hi"}],
+                "temperature": float("nan"),
+            },
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(body["error"]["param"], "temperature")
+
+    def test_malformed_message_item_returns_400(self):
+        status, body = self._post(
+            "/v1/chat/completions",
+            {"model": "noerelay/epr-1", "messages": ["not-an-object"]},
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(body["error"]["param"], "messages")
 
     def test_stream_returns_sse(self):
         status, headers, raw = self._post_stream(
@@ -3899,7 +3955,7 @@ class EndToEndSmokeTests(unittest.TestCase):
         tmpdir = tempfile.mkdtemp()
         try:
             db = SQLiteDatabase(str(Path(tmpdir) / "test.db"))
-            sm = SecretManager(db)
+            sm = SecretManager(db, master_key="tenant-isolation-test-key")
 
             # Create secrets for two tenants
             sm.store_secret("db-password", "alpha-secret", tenant_id="tenant-a")
@@ -4195,3 +4251,177 @@ class EndToEndSmokeTests(unittest.TestCase):
                 return resp.status, resp.read().decode("utf-8")
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode("utf-8")
+
+
+class HTTPBoundarySecurityTests(unittest.TestCase):
+    """Exercise controls at the real ThreadingHTTPServer boundary."""
+
+    def setUp(self):
+        self.config = GatewayConfig.from_env({
+            "NOERELAY_GATEWAY_HOST": "127.0.0.1",
+            "NOERELAY_GATEWAY_PORT": "0",
+            "NOERELAY_AUTH_REQUIRED": "1",
+            "NOERELAY_AUTH_API_KEYS": "boundary-test-key",
+            "NOERELAY_DATABASE_ENABLED": "0",
+            "NOERELAY_MAX_REQUEST_BODY_BYTES": "1024",
+        })
+        policy = load_policy(ROOT / "spec" / "routing-policy.json")
+        portfolio = json.loads(
+            (ROOT / "examples" / "candidate-actions.json").read_text("utf-8")
+        )
+        spec = json.loads(
+            (ROOT / "spec" / "verification-state-machine.json").read_text("utf-8")
+        )
+        auth = AuthMiddleware(
+            api_keys={"boundary-test-key"},
+            rate_limiter=PerKeyRateLimiter(),
+            require_auth=True,
+            default_rate=100.0,
+            default_burst=100,
+        )
+        self.ctx = PipelineContext(
+            config=self.config,
+            policy=policy,
+            portfolio=portfolio,
+            openrouter_client=StubOpenRouterClient(policy),
+            state_machine=VerificationStateMachine(spec),
+            registry=RunRegistry(),
+            auth=auth,
+            rbac=RBACMiddleware(),
+        )
+        self.server = create_server(self.config, self.ctx)
+        self.port = self.server.server_address[1]
+        self.base = f"http://127.0.0.1:{self.port}"
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=5)
+
+    def _request(self, path, *, method="GET", data=None, headers=None):
+        req = urllib.request.Request(
+            self.base + path,
+            data=data,
+            headers=headers or {},
+            method=method,
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5) as response:
+                raw = response.read()
+                return response.status, dict(response.headers), raw
+        except urllib.error.HTTPError as exc:
+            return exc.code, dict(exc.headers), exc.read()
+
+    def test_missing_and_invalid_credentials_are_rejected(self):
+        status, _, body = self._request("/v1/models")
+        self.assertEqual(status, 401)
+        self.assertEqual(json.loads(body)["error"]["code"], "invalid_api_key")
+
+        status, _, _ = self._request(
+            "/v1/models", headers={"Authorization": "Bearer wrong-key"}
+        )
+        self.assertEqual(status, 401)
+
+    def test_valid_credentials_receive_rate_limit_headers(self):
+        status, headers, body = self._request(
+            "/v1/models",
+            headers={"Authorization": "Bearer boundary-test-key"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["object"], "list")
+        self.assertEqual(headers["X-RateLimit-Limit"], "100")
+        self.assertIn("X-RateLimit-Remaining", headers)
+        self.assertIn("X-RateLimit-Reset", headers)
+
+    def test_cors_preflight_allows_only_configured_origins(self):
+        status, headers, _ = self._request(
+            "/v1/chat/completions",
+            method="OPTIONS",
+            headers={"Origin": "http://localhost:3000"},
+        )
+        self.assertEqual(status, 204)
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "http://localhost:3000")
+        self.assertIn("Authorization", headers["Access-Control-Allow-Headers"])
+
+        status, headers, _ = self._request(
+            "/v1/chat/completions",
+            method="OPTIONS",
+            headers={"Origin": "https://attacker.example"},
+        )
+        self.assertEqual(status, 403)
+        self.assertNotIn("Access-Control-Allow-Origin", headers)
+
+    def test_oversized_request_is_rejected_before_json_parsing(self):
+        payload = json.dumps({
+            "model": "noerelay/epr-1",
+            "messages": [{"role": "user", "content": "x" * 2048}],
+        }).encode("utf-8")
+        status, _, body = self._request(
+            "/v1/chat/completions",
+            method="POST",
+            data=payload,
+            headers={
+                "Authorization": "Bearer boundary-test-key",
+                "Content-Type": "application/json",
+            },
+        )
+        self.assertEqual(status, 413)
+        self.assertEqual(json.loads(body)["error"]["code"], "request_too_large")
+
+    def test_tenant_runs_and_cache_entries_are_isolated(self):
+        class KeyManager:
+            identities = {
+                "tenant-a-key": {
+                    "key_id": "key-a",
+                    "role": "operator",
+                    "tenant_id": "tenant-a",
+                },
+                "tenant-b-key": {
+                    "key_id": "key-b",
+                    "role": "operator",
+                    "tenant_id": "tenant-b",
+                },
+            }
+
+            def authenticate(self, raw_key):
+                return self.identities.get(raw_key)
+
+        self.ctx.auth = AuthMiddleware(
+            api_key_manager=KeyManager(),
+            require_auth=True,
+        )
+        self.ctx.response_cache = ResponseCache(max_size=10)
+        payload = json.dumps({
+            "model": "noerelay/epr-1",
+            "messages": [{"role": "user", "content": "tenant cache check"}],
+        }).encode("utf-8")
+
+        def create(key):
+            status, _, body = self._request(
+                "/v1/chat/completions",
+                method="POST",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json",
+                },
+            )
+            self.assertEqual(status, 200)
+            return json.loads(body)["epr"]["run_id"]
+
+        run_a = create("tenant-a-key")
+        run_b = create("tenant-b-key")
+        self.assertNotEqual(run_a, run_b)
+
+        status, _, _ = self._request(
+            f"/v1/epr/runs/{run_a}",
+            headers={"Authorization": "Bearer tenant-b-key"},
+        )
+        self.assertEqual(status, 404)
+        status, _, _ = self._request(
+            f"/v1/epr/runs/{run_a}",
+            headers={"Authorization": "Bearer tenant-a-key"},
+        )
+        self.assertEqual(status, 200)

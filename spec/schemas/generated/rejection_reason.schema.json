@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RejectionReason",
+  "oneOf": [
+    {
+      "type": "string",
+      "enum": [
+        "unavailable",
+        "data_policy",
+        "provider_denied",
+        "invalid_model_identity",
+        "cost_cap",
+        "latency_cap",
+        "acceptance_threshold",
+        "independent_verification",
+        "arithmetic_overflow"
+      ]
+    },
+    {
+      "type": "object",
+      "required": [
+        "missing_capability"
+      ],
+      "properties": {
+        "missing_capability": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

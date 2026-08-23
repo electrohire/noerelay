@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ledger",
+  "type": "object",
+  "required": [
+    "events"
+  ],
+  "properties": {
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/LedgerEvent"
+      }
+    }
+  },
+  "definitions": {
+    "LedgerEvent": {
+      "type": "object",
+      "required": [
+        "event_hash",
+        "kind",
+        "occurred_at_unix_ms",
+        "organization_id",
+        "payload",
+        "previous_hash",
+        "project_id",
+        "run_id",
+        "sequence"
+      ],
+      "properties": {
+        "event_hash": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/LedgerEventKind"
+        },
+        "occurred_at_unix_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "organization_id": {
+          "type": "string"
+        },
+        "payload": true,
+        "previous_hash": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "sequence": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "LedgerEventKind": {
+      "type": "string",
+      "enum": [
+        "request_accepted",
+        "contract_compiled",
+        "route_selected",
+        "tool_authorized",
+        "attempt_completed",
+        "verification_observed",
+        "claim_transitioned",
+        "cost_reconciled",
+        "run_released",
+        "run_rejected",
+        "administrative_action"
+      ]
+    }
+  }
+}

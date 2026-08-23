@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IdentityScope",
+  "type": "object",
+  "required": [
+    "environment_id",
+    "organization_id",
+    "project_id",
+    "session_id",
+    "user_id"
+  ],
+  "properties": {
+    "environment_id": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

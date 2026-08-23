@@ -13,9 +13,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from epr.kernel import select_route
@@ -92,6 +93,8 @@ class PipelineContext:
     secret_manager: Any = None
     # Analytics (Phase 5)
     analytics: Any = None
+    auth: Any = None
+    request_local: Any = field(default_factory=threading.local)
 
 
 def _sha256(value: str) -> str:
@@ -205,6 +208,35 @@ def _plan_model(plan: dict[str, Any]) -> str:
 def _plan_requires_canary(plan: dict[str, Any]) -> bool:
     """True when a plan is marked experimental/canary-only."""
     return bool(plan.get("experimental") or plan.get("canary"))
+
+
+def _runtime_flag(ctx: PipelineContext, key: str) -> bool:
+    """Read a fail-safe boolean runtime control from persistent config."""
+    if ctx.config_manager is None:
+        return False
+    value = ctx.config_manager.get(key, False)
+    return value is True or (
+        isinstance(value, str) and value.casefold() in {"1", "true", "yes", "on"}
+    )
+
+
+def _apply_route_kill_switches(
+    ctx: PipelineContext, candidates: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Mark administratively disabled providers/models unavailable."""
+    filtered: list[dict[str, Any]] = []
+    for candidate in candidates:
+        item = dict(candidate)
+        model_id = str(item.get("model_id") or "")
+        provider = str(item.get("provider_family") or "")
+        if (
+            (model_id and _runtime_flag(ctx, f"kill_switch.model:{model_id}"))
+            or (provider and _runtime_flag(ctx, f"kill_switch.provider:{provider}"))
+        ):
+            item["available"] = False
+            item["disabled_by_kill_switch"] = True
+        filtered.append(item)
+    return filtered
 
 
 def _record_fallback(
@@ -565,13 +597,18 @@ def build_pipeline_context(config: GatewayConfig) -> PipelineContext:
         from .db_registry import DatabaseRunRegistry  # local import avoids cycles
 
         db = SQLiteDatabase(config.database_path)
-        registry: RunRegistry = DatabaseRunRegistry(db)
+        registry: RunRegistry = DatabaseRunRegistry(
+            db, max_runs=config.run_retention_max
+        )
     elif config.persistence_dir:
         from .persistence import FileRunRegistry  # local import avoids cycles
 
-        registry = FileRunRegistry(config.persistence_dir)
+        registry = FileRunRegistry(
+            config.persistence_dir,
+            max_runs=config.run_retention_max,
+        )
     else:
-        registry = RunRegistry()
+        registry = RunRegistry(max_runs=config.run_retention_max)
 
     # Wire escalation policy with configured thresholds.
     escalation_policy = EscalationPolicy(
@@ -627,6 +664,7 @@ def build_pipeline_context(config: GatewayConfig) -> PipelineContext:
     config_manager = None
     secret_manager = None
     analytics = None
+    auth = None
 
     if config.database_enabled:
         from .analytics import AnalyticsEngine
@@ -637,7 +675,7 @@ def build_pipeline_context(config: GatewayConfig) -> PipelineContext:
         from .alerting import AlertManager
         from .webhooks import WebhookManager
         from .config_manager import ConfigManager
-        from .secrets import SecretManager
+        from .secrets import SecretConfigurationError, SecretManager
 
         rbac = RBACMiddleware()
         audit_logger = AuditLogger(db)
@@ -646,8 +684,35 @@ def build_pipeline_context(config: GatewayConfig) -> PipelineContext:
         alert_manager = AlertManager()
         webhook_manager = WebhookManager(db)
         config_manager = ConfigManager(db)
-        secret_manager = SecretManager(db)
+        try:
+            secret_manager = SecretManager(db)
+        except SecretConfigurationError:
+            logger.warning(
+                "secret store disabled because NOERELAY_MASTER_KEY is not configured",
+                component="secrets",
+            )
         analytics = AnalyticsEngine(db)
+
+    from .auth import AuthMiddleware
+    from .rate_limit import PerKeyRateLimiter
+
+    api_key_manager = None
+    if config.database_enabled:
+        from .api_keys import APIKeyManager
+
+        api_key_manager = APIKeyManager(db)
+    auth = AuthMiddleware(
+        api_keys={
+            key.strip()
+            for key in (config.auth_api_keys or "").split(",")
+            if key.strip()
+        },
+        api_key_manager=api_key_manager,
+        rate_limiter=PerKeyRateLimiter(),
+        require_auth=config.auth_required,
+        default_rate=config.rate_limit_rate,
+        default_burst=config.rate_limit_burst,
+    )
 
     return PipelineContext(
         config=config,
@@ -669,6 +734,7 @@ def build_pipeline_context(config: GatewayConfig) -> PipelineContext:
         config_manager=config_manager,
         secret_manager=secret_manager,
         analytics=analytics,
+        auth=auth,
     )
 
 
@@ -680,7 +746,26 @@ def run_inference_pipeline(
     ``request`` is the internal normalized shape with keys ``model``,
     ``messages``, ``governance`` (optional), and ``passthrough``.
     """
-    # Check response cache before any processing.
+    tenant_id = str(request.get("tenant_id") or "default")
+    governance = request.get("governance") or {}
+    project_id = str(governance.get("project_id") or "")
+    if (
+        _runtime_flag(ctx, "kill_switch.global")
+        or _runtime_flag(ctx, f"kill_switch.tenant:{tenant_id}")
+        or (project_id and _runtime_flag(ctx, f"kill_switch.project:{project_id}"))
+    ):
+        raise PipelineError(
+            503,
+            error_envelope(
+                "inference is disabled by an administrative kill switch",
+                "server_error",
+                None,
+                "kill_switch_active",
+            ),
+        )
+
+    # Check response cache only after kill switches so cached responses cannot
+    # bypass an emergency stop.
     if ctx.response_cache is not None:
         cached = ctx.response_cache.get(request)
         if cached is not None:
@@ -692,6 +777,10 @@ def run_inference_pipeline(
     subject_id = f"task-{uuid.uuid4().hex}"
 
     record = ctx.registry.begin(run_id, trace_id)
+    record.tenant_id = tenant_id
+    registry_db = getattr(ctx.registry, "_db", None)
+    if registry_db is not None and hasattr(registry_db, "set_run_tenant"):
+        registry_db.set_run_tenant(run_id, tenant_id)
     ctx.state_machine.begin(run_id)
 
     # Resolve local-model routing preference for this request.
@@ -738,10 +827,13 @@ def run_inference_pipeline(
     # to allow the local gateway and merge local candidates whose data_policy
     # matches the request's merged governance.
     routing_policy = ctx.policy
-    routing_portfolio = ctx.portfolio
+    routing_portfolio = _apply_route_kill_switches(ctx, ctx.portfolio)
     if prefer_local and ctx.local_model_client is not None:
         routing_policy = extend_policy_with_local(ctx.policy)
-        routing_portfolio = _merge_portfolio_with_local(ctx.portfolio, merged)
+        routing_portfolio = _apply_route_kill_switches(
+            ctx,
+            _merge_portfolio_with_local(ctx.portfolio, merged),
+        )
 
     # EPR-ROUTE-006: canary traffic detection and policy version tracking.
     canary_router = CanaryTrafficRouter()
@@ -1199,7 +1291,6 @@ def run_inference_pipeline(
 
     # Phase 3: Record tenant spend.
     if ctx.tenant_manager is not None and record.actual_cost_usd > 0:
-        tenant_id = request.get("passthrough", {}).get("tenant_id", "default")
         ctx.tenant_manager.record_spend(tenant_id, record.actual_cost_usd, run_id)
 
     # Phase 3: Deliver webhook for run.completed.

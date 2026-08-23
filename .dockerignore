@@ -4,4 +4,10 @@ __pycache__
 *.pyc
 .pytest_cache
 .env
+.env.*
+!.env.example
 *.log
+rtk/target
+/target
+htmlcov
+.coverage

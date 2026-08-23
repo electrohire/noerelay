@@ -1,0 +1,5 @@
+{
+  "model": "openai/gpt-4o-mini",
+  "messages": [{"role": "user", "content": "Return JSON"}],
+  "response_format": {"type": "json_object"}
+}

@@ -2,13 +2,14 @@
 
 **Generated:** 2026-08-20
 **Repository version:** `0.1.0-draft`
+**Status:** Historical snapshot; superseded by [`requirements.md`](requirements.md) and [`verification-matrix.md`](verification-matrix.md)
 **Plan baseline:** [`docs/product-completion-plan.md`](product-completion-plan.md)
 
 ---
 
 ## Executive Summary
 
-NoeRelay is currently a **dependency-free Python reference specification** (`0.1.0-draft`) — not a production inference service. The product completion plan defines a **Go-first production control plane** with PostgreSQL, durable workers, A2A/MCP/AG-UI protocols, and a full operator console. **None of that production infrastructure exists yet.**
+This file records the 2026-08-20 pre-migration assessment. ADR-0001 has since replaced the Go-first decision with a Rust release-authority core. Do not use the percentages or language allocation below as current status; rerun the verification matrix for a current release assessment.
 
 The reference kernel demonstrates the **architectural correctness** of the EPR-1 design: deterministic routing, epistemic adjudication, verification DAGs, evidence ledgers, and governed memory all work correctly in an in-memory Python prototype. But the project is at **Phase 0 (Baseline)** of an 8-phase, 20-22 week plan. The architecture, specifications, schemas, and conformance tests are complete. The production implementation has not begun.
 

@@ -1,0 +1,23 @@
+{
+  "candidate_id": "candidate-1",
+  "openrouter_model_id": "anthropic/claude-sonnet-4",
+  "provider": "anthropic",
+  "available": true,
+  "capabilities": [
+    "coding",
+    "text"
+  ],
+  "maximum_data_class": "confidential",
+  "cost": {
+    "inference_microusd": 1000,
+    "tools_microusd": 200,
+    "verification_microusd": 100,
+    "expected_retry_microusd": 100,
+    "expected_fallback_microusd": 50,
+    "infrastructure_microusd": 25,
+    "expected_human_review_microusd": 25
+  },
+  "latency_p95_ms": 250,
+  "acceptance_lcb_ppm": 975000,
+  "supports_independent_verification": true
+}

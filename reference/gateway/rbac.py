@@ -77,10 +77,7 @@ ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
         Permission.MODELS_READ, Permission.MODELS_WRITE, Permission.MODELS_LIFECYCLE,
         Permission.BENCHMARKS_READ, Permission.BENCHMARKS_WRITE,
         Permission.GOVERNANCE_READ, Permission.ROUTING_READ,
-        Permission.ANALYTICS_READ, Permission.LEDGER_READ,
-        Permission.TENANTS_READ, Permission.ALERTS_READ,
-        Permission.WEBHOOKS_READ, Permission.CONFIG_READ,
-        Permission.SECRETS_READ,
+        Permission.LEDGER_READ,
     },
     Role.AUDITOR: {
         Permission.MODELS_READ, Permission.BENCHMARKS_READ,
@@ -90,22 +87,16 @@ ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
         Permission.AUDIT_READ,
         Permission.TENANTS_READ, Permission.ALERTS_READ,
         Permission.WEBHOOKS_READ, Permission.CONFIG_READ,
-        Permission.SECRETS_READ,
     },
     Role.DEVELOPER: {
         Permission.CHAT_COMPLETIONS, Permission.RESPONSES_API,
         Permission.BENCHMARKS_READ, Permission.BENCHMARKS_WRITE,
         Permission.MODELS_READ, Permission.GOVERNANCE_READ,
-        Permission.ROUTING_READ, Permission.ANALYTICS_READ,
-        Permission.TENANTS_READ, Permission.ALERTS_READ,
-        Permission.WEBHOOKS_READ, Permission.CONFIG_READ,
-        Permission.SECRETS_READ,
+        Permission.ROUTING_READ,
     },
     Role.VIEWER: {
         Permission.MODELS_READ, Permission.GOVERNANCE_READ,
         Permission.ROUTING_READ,
-        Permission.TENANTS_READ, Permission.ALERTS_READ,
-        Permission.WEBHOOKS_READ, Permission.CONFIG_READ,
     },
 }
 
@@ -137,6 +128,7 @@ class RBACMiddleware:
         ("GET", "/v1/benchmarks/compare"): [Permission.BENCHMARKS_READ],
         # Governance
         ("GET", "/v1/governance/policy"): [Permission.GOVERNANCE_READ],
+        ("POST", "/v1/governance/policy"): [Permission.GOVERNANCE_WRITE],
         ("PUT", "/v1/governance/policy"): [Permission.GOVERNANCE_WRITE],
         ("GET", "/v1/governance/risk-classes"): [Permission.GOVERNANCE_READ],
         ("PUT", "/v1/governance/risk-class"): [Permission.GOVERNANCE_WRITE],
@@ -155,6 +147,8 @@ class RBACMiddleware:
         ("GET", "/v1/analytics/usage"): [Permission.ANALYTICS_READ],
         ("GET", "/v1/analytics/escalations"): [Permission.ANALYTICS_READ],
         ("GET", "/v1/analytics/audit"): [Permission.AUDIT_READ],
+        ("GET", "/v1/analytics/benchmarks"): [Permission.ANALYTICS_READ],
+        ("GET", "/v1/analytics/dashboard"): [Permission.ANALYTICS_READ],
         # Export/Import
         ("GET", "/v1/export"): [Permission.EXPORT],
         ("POST", "/v1/import"): [Permission.IMPORT],
@@ -179,6 +173,7 @@ class RBACMiddleware:
         ("GET", "/v1/alerts"): [Permission.ALERTS_READ],
         ("POST", "/v1/alerts/acknowledge"): [Permission.ALERTS_WRITE],
         ("POST", "/v1/alerts/rules"): [Permission.ALERTS_WRITE],
+        ("POST", "/v1/alerts"): [Permission.ALERTS_WRITE],
         # Webhooks
         ("GET", "/v1/webhooks"): [Permission.WEBHOOKS_READ],
         ("POST", "/v1/webhooks"): [Permission.WEBHOOKS_WRITE],
@@ -192,8 +187,10 @@ class RBACMiddleware:
         ("DELETE", "/v1/secrets"): [Permission.SECRETS_WRITE],
         # System (no auth required)
         ("GET", "/health"): [],
+        ("GET", "/ready"): [],
         ("GET", "/metrics"): [Permission.ANALYTICS_READ],
         ("GET", "/cache/stats"): [Permission.ANALYTICS_READ],
+        ("GET", "/dashboard"): [Permission.ANALYTICS_READ],
     }
 
     def check_permission(self, method: str, path: str, role: str | None) -> tuple[bool, str | None]:
@@ -204,14 +201,18 @@ class RBACMiddleware:
         if role is None:
             return True, None  # No auth required (open access mode)
 
-        required = self._get_required_permissions(method, path)
-        if not required:
-            return True, None  # No permission required (e.g., /health)
-
         try:
             role_enum = Role(role)
         except ValueError:
             return False, f"unknown role '{role}'"
+
+        required = self._get_required_permissions(method, path)
+        if required is None:
+            if role_enum is Role.ADMIN:
+                return True, None
+            return False, "route is not available to this role"
+        if not required:
+            return True, None  # Explicitly public route (e.g., /health)
 
         role_perms = ROLE_PERMISSIONS.get(role_enum, set())
         missing = required - role_perms
@@ -219,7 +220,9 @@ class RBACMiddleware:
             return False, f"role '{role}' lacks permissions: {', '.join(p.value for p in missing)}"
         return True, None
 
-    def _get_required_permissions(self, method: str, path: str) -> set[Permission]:
+    def _get_required_permissions(
+        self, method: str, path: str
+    ) -> set[Permission] | None:
         """Get required permissions for a route."""
         # Try exact match first
         key = (method, path)
@@ -234,4 +237,4 @@ class RBACMiddleware:
                 if remaining.startswith("/") or not remaining:
                     return set(perms)
 
-        return set()  # No permissions required for unknown routes
+        return None  # Unmapped routes are denied to non-admin identities.

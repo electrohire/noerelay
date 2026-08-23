@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReleaseOutcome",
+  "type": "string",
+  "enum": [
+    "accepted",
+    "repair_required",
+    "escalation_required",
+    "human_approval_required"
+  ]
+}

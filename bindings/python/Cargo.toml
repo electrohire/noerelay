@@ -1,0 +1,16 @@
+[package]
+name = "noerelay-python"
+description = "Python bindings to the authoritative NoeRelay Rust core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "noerelay_python"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+noerelay-domain = { package = "noerelay-core", path = "../../crates/noerelay-core" }
+pyo3.workspace = true
+serde_json.workspace = true

@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Recommendation",
+  "type": "object",
+  "required": [
+    "acceptance_lcb_ppm",
+    "advisory_only",
+    "cohort",
+    "reason",
+    "sample_count"
+  ],
+  "properties": {
+    "acceptance_lcb_ppm": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "advisory_only": {
+      "type": "boolean"
+    },
+    "candidate_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cohort": {
+      "type": "string"
+    },
+    "fresh_through_unix_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "mean_cost_microusd": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "mean_latency_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "reason": {
+      "type": "string"
+    },
+    "sample_count": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Evidence",
+  "type": "object",
+  "required": [
+    "artifact_hash",
+    "evidence_id",
+    "source_revision",
+    "status",
+    "test_id"
+  ],
+  "properties": {
+    "artifact_hash": {
+      "type": "string"
+    },
+    "evidence_id": {
+      "type": "string"
+    },
+    "source_revision": {
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/definitions/EvidenceStatus"
+    },
+    "test_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "EvidenceStatus": {
+      "type": "string",
+      "enum": [
+        "observed_pass",
+        "observed_fail",
+        "not_run",
+        "claimed"
+      ]
+    }
+  }
+}

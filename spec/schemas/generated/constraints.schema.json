@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Constraints",
+  "type": "object",
+  "required": [
+    "allowed_providers",
+    "data_class",
+    "min_acceptance_lcb_ppm",
+    "require_independent_verification",
+    "required_capabilities"
+  ],
+  "properties": {
+    "allowed_providers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "data_class": {
+      "$ref": "#/definitions/DataClass"
+    },
+    "max_latency_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "max_total_cost_microusd": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "min_acceptance_lcb_ppm": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "require_independent_verification": {
+      "type": "boolean"
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "DataClass": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    }
+  }
+}

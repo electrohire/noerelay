@@ -31,7 +31,7 @@ The formal threat model is maintained in [`docs/threat-model.md`](docs/threat-mo
 - Threat actors and capabilities
 - 10 identified threats with mitigations and residual risk assessments
 - Security controls summary
-- Assumptions and future work for the Go production phase
+- Assumptions and future work for the Rust authority migration and isolated adapters
 
 All contributors should review the threat model before making changes to security-sensitive components.
 
@@ -51,7 +51,9 @@ All contributors should review the threat model before making changes to securit
 | Fail-closed verification | ✅ Implemented |
 | TLS support | ⚠️ Optional |
 | OIDC/OAuth | ❌ Planned (Go phase) |
-| Key hashing at rest | ❌ Planned (Go phase) |
+| API-key hashing at rest | ✅ Implemented |
+| Authenticated secret encryption | ✅ Implemented; master key required |
+| Exact-origin CORS and body limits | ✅ Implemented |
 | Container vulnerability scanning | ❌ Planned |
 | SBOM generation | ❌ Planned |
 

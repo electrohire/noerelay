@@ -7,6 +7,79 @@ on:
     branches: [main]
 
 jobs:
+  rust:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:84560e3b9c6874893fc4e2854f5dc3e7c1a37bc9d1dfd7a8c641310ae22ba5ad
+        env:
+          POSTGRES_USER: noerelay
+          POSTGRES_PASSWORD: noerelay-ci-password
+          POSTGRES_DB: noerelay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U noerelay -d noerelay_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NOERELAY_TEST_DATABASE_URL: postgresql://noerelay:noerelay-ci-password@127.0.0.1:5432/noerelay_test
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust stable
+      run: |
+        rustup toolchain install stable --profile minimal
+        rustup default stable
+
+    - name: Format
+      run: cargo fmt --all -- --check
+
+    - name: Lint
+      run: cargo clippy --workspace --all-targets -- -D warnings
+
+    - name: Audit Rust dependencies
+      run: |
+        cargo install cargo-audit --locked --version 0.22.1
+        cargo audit
+
+    - name: Test Rust authority workspace
+      run: cargo test --workspace --locked
+
+    - name: Build Python binding wheel
+      run: |
+        python -m pip install maturin
+        maturin build --manifest-path bindings/python/Cargo.toml --locked --release --out target/wheels
+
+  go-a2a:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/a2a-adapter
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: services/a2a-adapter/go.mod
+        cache-dependency-path: services/a2a-adapter/go.sum
+
+    - name: Check formatting
+      run: test -z "$(gofmt -l .)"
+
+    - name: Test A2A adapter
+      run: go test ./...
+
+    - name: Vet A2A adapter
+      run: go vet ./...
+
+    - name: Audit Go dependencies
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+        govulncheck ./...
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -35,7 +108,7 @@ jobs:
         python -m pytest tests/test_remote_smoke.py -v
 
   docker:
-    needs: test
+    needs: [test, rust, go-a2a]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
@@ -46,9 +119,25 @@ jobs:
       run: docker build -t noerelay:latest .
 
     - name: Test Docker image
+      env:
+        NOERELAY_CANDIDATES_JSON: >-
+          [{"candidate_id":"stub","openrouter_model_id":"anthropic/claude-test","provider":"anthropic","available":true,"capabilities":["text"],"maximum_data_class":"confidential","cost":{"inference_microusd":1,"tools_microusd":0,"verification_microusd":0,"expected_retry_microusd":0,"expected_fallback_microusd":0,"infrastructure_microusd":0,"expected_human_review_microusd":0},"latency_p95_ms":1,"acceptance_lcb_ppm":999999,"supports_independent_verification":true}]
       run: |
-        docker run -d --name noerelay-test -p 8080:8080 noerelay:latest
+        docker run -d --name noerelay-test -p 8080:8080 \
+          -e NOERELAY_API_KEY=ci-test-key-that-is-at-least-32-characters \
+          -e NOERELAY_OPENROUTER_MODE=stub \
+          -e NOERELAY_ORGANIZATION_ID=ci-org \
+          -e NOERELAY_PROJECT_ID=ci-project \
+          -e NOERELAY_CANDIDATES_JSON="$NOERELAY_CANDIDATES_JSON" \
+          noerelay:latest
         sleep 5
-        curl -s http://127.0.0.1:8080/health
+        curl --fail --silent http://127.0.0.1:8080/health
+        curl --fail --silent -H 'Authorization: Bearer ci-test-key-that-is-at-least-32-characters' \
+          http://127.0.0.1:8080/v1/models
+        curl --fail --silent -X POST \
+          -H 'Authorization: Bearer ci-test-key-that-is-at-least-32-characters' \
+          -H 'Content-Type: application/json' \
+          -d '{"model":"noerelay/epr-1","messages":[{"role":"user","content":"Hello"}]}' \
+          http://127.0.0.1:8080/v1/chat/completions
         docker stop noerelay-test
         docker rm noerelay-test

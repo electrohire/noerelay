@@ -1,0 +1,25 @@
+{
+  "request_id": "req-sample",
+  "scope": {
+    "organization_id": "org",
+    "project_id": "project",
+    "environment_id": "prod",
+    "user_id": "user@example.invalid",
+    "session_id": "session-1"
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "Build a reliable API"
+    }
+  ],
+  "risk": "medium",
+  "data_class": "internal",
+  "acceptance_criteria": [],
+  "required_capabilities": [
+    "coding"
+  ],
+  "allowed_tools": [],
+  "allowed_agents": [],
+  "metadata": {}
+}

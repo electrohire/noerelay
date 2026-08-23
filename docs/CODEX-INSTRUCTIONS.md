@@ -1,5 +1,7 @@
 # NoeRelay — Comprehensive Codex Instructions for Commercial Release Polish
 
+> **Historical attachment — superseded 2026-08-21.** Do not apply the Python-only or “do not start the rewrite” constraints in this file. The current user-approved baseline is [`requirements.md`](requirements.md) plus [ADR-0001](adr/0001-rust-release-authority.md): Rust owns the trusted core and public gateway, Python supplies bindings/extensions, and Go is used only for justified adapters.
+
 **Document version:** 1.0
 **Generated:** 2026-08-20
 **Target repository:** `c:/Users/trist/Development/ElectroHire/norelay`

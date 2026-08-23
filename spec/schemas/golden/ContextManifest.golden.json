@@ -1,0 +1,20 @@
+{
+  "budget_tokens": 10000,
+  "used_tokens": 150,
+  "included": [
+    {
+      "node_id": "req-1",
+      "kind": "requirement",
+      "content": "Must support HTTPS",
+      "source_handle": "ledger:req-1",
+      "estimated_tokens": 50,
+      "salience_ppm": 900000,
+      "sequence": 1,
+      "explicitly_protected": false
+    }
+  ],
+  "omitted_node_ids": [
+    "chat-1"
+  ],
+  "manifest_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+}

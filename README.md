@@ -1,5 +1,12 @@
 # NoeRelay
 
+[![Conformance](https://github.com/electrohire/noerelay/actions/workflows/conformance.yml/badge.svg)](https://github.com/electrohire/noerelay/actions/workflows/conformance.yml)
+[![CI](https://github.com/electrohire/noerelay/actions/workflows/ci.yml/badge.svg)](https://github.com/electrohire/noerelay/actions/workflows/ci.yml)
+![Version: 0.1.0-draft](https://img.shields.io/badge/version-0.1.0--draft-orange)
+![Rust stable](https://img.shields.io/badge/core-Rust-orange)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)
+![License: Proprietary](https://img.shields.io/badge/license-proprietary-red)
+
 **Evidence-governed AI orchestration that routes by capability, verifies by policy, and optimizes for the lowest acceptable total cost.**
 
 NoeRelay is a virtual model with an OpenAI-compatible client wire protocol, backed by the **Epistemic Portfolio Runtime (EPR-1)**. Model inference is routed through OpenRouter to explicit non-OpenAI model IDs. Clients interact with one stable model endpoint while NoeRelay can delegate individual steps to different language models, deterministic tools, retrievers, image processors, image generators, formal solvers, or human reviewers.
@@ -8,9 +15,11 @@ The generative layer proposes. Deterministic policy, evidence, provenance, and v
 
 > **Provider boundary:** Protocol compatibility is not provider usage. NoeRelay does not use OpenAI-hosted models, rejects the `openai` family and `openai/` model namespace, and disables automatic model selection that could bypass the evaluated portfolio.
 
-> **Project status:** `0.1.0-draft` executable specification and dependency-free Python reference kernel. This repository defines the contracts a production gateway must preserve; it is not yet a production inference service.
+> **Project status:** `0.1.0-draft` Rust-authority migration. The repository now contains a compiling Rust core, durable PostgreSQL authority store, Rust OpenAI-wire/OpenRouter gateway, Python bindings, a Go A2A adapter, and the legacy Python conformance oracle. It is not yet a GA production inference-service claim; see the evidence-backed [implementation status](docs/implementation-status.md) and [verification matrix](docs/verification-matrix.md).
 
-> **Production implementation decision:** The NoeRelay control plane will be Go-first. Python remains a first-class SDK, executable-specification, evaluation, and research-worker boundary; TypeScript serves the console/client layer; Rust is reserved for measured, narrowly scoped hardened components. Agent delegation uses governed A2A v1 adapters, tools/data use MCP, and user-facing run events use AG-UI.
+The remaining GA program is specified as a single agent-orchestrator input in [docs/ga-completion-orchestrator-plan.md](docs/ga-completion-orchestrator-plan.md).
+
+> **Production implementation decision:** Rust owns the trusted control plane and release authority. Python remains a first-class binding, executable-specification, evaluation, and research-worker boundary; TypeScript serves the console/client layer; Go is limited to justified protocol/operations adapters such as A2A. SQL and operator scripts are used where their native environments provide concrete value. See [ADR-0001](docs/adr/0001-rust-release-authority.md) and the [polyglot boundary ADR](docs/adr/0002-justified-polyglot-boundaries.md).
 
 ## What “NoeRelay” means
 
@@ -63,7 +72,9 @@ flowchart LR
     V -. "repair or semantic fallback" .-> R
 ```
 
-The complete normative design is in [docs/architecture.md](docs/architecture.md). Requirements use the `EPR-*` identifiers and the terms **MUST**, **MUST NOT**, **SHOULD**, and **MAY** normatively.
+The product baseline is in [docs/requirements.md](docs/requirements.md), with executable release expectations in [docs/verification-matrix.md](docs/verification-matrix.md). The earlier EPR architecture remains a conformance source where it does not conflict with ADR-0001.
+
+The Rust workspace separates `noerelay-core` (policy and authority), `noerelay-store` (PostgreSQL persistence), and `noerelay-gateway` (OpenAI-compatible/OpenRouter transport). `bindings/python` exposes the Rust authority without reimplementing it, while `services/a2a-adapter` is the deliberately narrow Go protocol boundary.
 
 ## Core properties
 
@@ -90,18 +101,22 @@ NoeRelay does **not** claim that a language model—or a collection of agreeing 
 
 ## API compatibility
 
-The draft [OpenAPI 3.1 specification](spec/openapi.json) defines the intended public surface:
+The draft [OpenAPI 3.1 specification](spec/openapi.json) defines the stable compatibility contract:
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /v1/models` | Lists the stable `noerelay/epr-1` virtual model. |
 | `POST /v1/chat/completions` | OpenAI-compatible chat completions with optional governance metadata. |
 | `POST /v1/responses` | OpenAI Responses-compatible execution with optional governance metadata. |
-| `GET /v1/epr/runs/{run_id}` | Retrieves the evidence receipt for a completed or escalated run. |
+| `GET /v1/noerelay/runs/{run_id}/receipt` | Retrieves the signed evidence receipt for an accepted run. |
+| `GET /v1/noerelay/reports/costs` | Reports token and integer micro-USD usage by organization, project, and user. |
+| `POST /v1/noerelay/governance/release-gate` | Evaluates requirement-to-test-to-observed-evidence traceability. |
 
 Standard request fields pass through. An optional `governance` object can specify project identity, risk class, cost and latency ceilings, required acceptance probability, data policy, retention class, and evidence-receipt behavior.
 
 OpenAI compatibility in this section describes request and response shapes only. The backend model gateway is OpenRouter, and deterministic policy blocks OpenAI model families, namespaces, and upstream endpoints. No `OPENAI_API_KEY` is used.
+
+The legacy Python reference server exposes additional authenticated operational routes for administration, analytics, benchmarks, configuration, secrets, and ledger inspection. Those historical routes are documented in [docs/api-reference.md](docs/api-reference.md); they are not part of the current Rust gateway contract and may evolve during the draft phase.
 
 Example request against a future conforming gateway:
 
@@ -129,14 +144,25 @@ curl "$NOERELAY_BASE_URL/v1/responses" \
 
 ```text
 docs/
+  requirements.md                 Authoritative product outcomes and invariants
+  verification-matrix.md          Requirement-to-test and release evidence gates
+  implementation-status.md        Implemented, partial, and externally blocked gates
+  adr/0001-rust-release-authority.md
   architecture.md                 Normative architecture and invariants
   benchmarking.md                 Hugging Face acquisition and evaluation policy
   environment.md                  Local and GitHub test credentials
+  quickstart.md                   Five-minute local and Compose setup
+  production-deployment.md        Security and operations deployment checklist
   research-basis.md               Research and standards basis
 examples/
   candidate-actions.json          Candidate portfolio actions
   context-capsule.json            Compaction-safe active context
   high-risk-coding-contract.json  Typed high-risk task contract
+crates/
+  noerelay-core/                  Rust release-authority domain kernel
+  noerelay-gateway/               Rust OpenAI-compatible/OpenRouter service
+bindings/python/                  PyO3 bindings to the same Rust authority functions
+services/a2a-adapter/             Narrow Go A2A v1.0 protocol adapter
 reference/
   demo.py                         Deterministic routing demonstration
   epr/                            Dependency-free Python reference kernel
@@ -155,11 +181,22 @@ tests/
 
 ## Quick start
 
+For the shortest end-to-end path, use the [five-minute quick start](docs/quickstart.md).
+
 ### Requirements
 
-- Python 3.11 or newer
-- No third-party packages for the reference kernel
-- Optional: `jsonschema` for standards-level schema validation tests
+- Rust stable (1.85 minimum; CI uses current stable)
+- Python 3.12 for building the PyO3 binding; Python 3.11+ for legacy conformance tests
+- Go 1.26+ only when building the optional A2A adapter
+- Docker for the supported local container path
+- Optional: `jsonschema` for standards-level legacy schema validation tests
+
+### Run the Rust authority tests
+
+```powershell
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets -- -D warnings
+```
 
 ### Run the conformance tests
 
@@ -181,6 +218,36 @@ python reference/demo.py
 ```
 
 The example demonstrates deterministic selection of the least-cost admissible worker plus an independent provider-family verifier. Cheaper candidates below the acceptance floor are retained in the audit as rejected rather than selected.
+
+### Run the gateway locally
+
+```powershell
+$env:NOERELAY_API_KEY = "replace-with-at-least-32-characters"
+$env:NOERELAY_OPENROUTER_MODE = "stub"
+$env:NOERELAY_ORGANIZATION_ID = "local-org"
+$env:NOERELAY_PROJECT_ID = "local-project"
+$env:NOERELAY_CANDIDATES_JSON = '[{"candidate_id":"stub","openrouter_model_id":"anthropic/claude-test","provider":"anthropic","available":true,"capabilities":["text"],"maximum_data_class":"confidential","cost":{"inference_microusd":1,"tools_microusd":0,"verification_microusd":0,"expected_retry_microusd":0,"expected_fallback_microusd":0,"infrastructure_microusd":0,"expected_human_review_microusd":0},"latency_p95_ms":1,"acceptance_lcb_ppm":999999,"supports_independent_verification":true}]'
+cargo run -p noerelay-gateway
+```
+
+Then run the portable smoke test from Git Bash, Linux, or macOS:
+
+```bash
+bash examples/curl-test.sh
+```
+
+The gateway authenticates every inference/model request with `NOERELAY_API_KEY`; only health/readiness are public. Stub mode is rejected when `NOERELAY_PRODUCTION_MODE=1`. See the [production deployment guide](docs/production-deployment.md) before exposing it.
+
+### Run the optional A2A adapter
+
+The adapter uses the official A2A Go SDK and delegates all policy, routing, and release authority to the Rust gateway. Configure a distinct `NOERELAY_A2A_BEARER_KEY`, retain the gateway service key in `NOERELAY_API_KEY`, then run:
+
+```powershell
+Push-Location services/a2a-adapter
+go test ./...
+go run .
+Pop-Location
+```
 
 ### Configure live inference and benchmarks
 
@@ -233,7 +300,7 @@ This ElectroHire repository is publicly visible. Do not place production credent
 
 ## Development and contribution
 
-Changes to normative behavior require corresponding schemas, examples, tests, and research or standards rationale. See [CONTRIBUTING.md](CONTRIBUTING.md) for the expected workflow.
+Changes to normative behavior require corresponding schemas, examples, tests, and research or standards rationale. See [CONTRIBUTING.md](CONTRIBUTING.md) for the expected workflow and release-note template, and [CHANGELOG.md](CHANGELOG.md) for user-visible changes.
 
 ## Roadmap
 

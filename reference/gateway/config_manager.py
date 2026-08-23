@@ -74,9 +74,14 @@ class ConfigManager:
         with self._lock:
             old_cache = dict(self._cache)
             self._cache = dict(all_config)
-            # Notify for changed keys
-            for key, new_value in all_config.items():
-                old_value = old_cache.get(key)
-                if old_value != new_value:
-                    self._notify_listeners(key, new_value)
-        return dict(self._cache)
+            changed = [
+                (key, new_value)
+                for key, new_value in all_config.items()
+                if old_cache.get(key) != new_value
+            ]
+            result = dict(self._cache)
+        # Notify outside the lock: callbacks may call get/set and must not
+        # deadlock the hot-reload path.
+        for key, new_value in changed:
+            self._notify_listeners(key, new_value)
+        return result

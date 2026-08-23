@@ -36,6 +36,8 @@ class CompressionProfiler:
     """
 
     def __init__(self, max_entries: int = 1000) -> None:
+        if max_entries < 1:
+            raise ValueError("max_entries must be at least 1")
         self._max_entries = max_entries
         self._entries: list[ProfileEntry] = []
         self._lock = threading.Lock()

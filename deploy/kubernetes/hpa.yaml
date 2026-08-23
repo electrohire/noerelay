@@ -10,7 +10,8 @@ spec:
     kind: Deployment
     name: noerelay
   minReplicas: 1
-  maxReplicas: 5
+  # Version-conflict reload/retry and distributed work leasing are not complete.
+  maxReplicas: 1
   metrics:
   - type: Resource
     resource:

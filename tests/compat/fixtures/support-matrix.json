@@ -1,0 +1,15 @@
+{
+  "version": "2024-02-15",
+  "profiles": [
+    {
+      "profile": "chat_completions_v1",
+      "supported_fields": ["model", "messages", "temperature", "max_tokens", "max_completion_tokens", "top_p", "frequency_penalty", "presence_penalty", "stop", "stream", "tools", "tool_choice", "response_format", "seed", "user", "n", "logprobs", "top_logprobs", "stream_options", "service_tier", "parallel_tool_calls", "logit_bias", "metadata"],
+      "unsupported_fields": ["audio", "modalities", "prediction", "reasoning_effort", "store", "web_search_options"]
+    },
+    {
+      "profile": "responses_v1",
+      "supported_fields": ["model", "input", "instructions", "temperature", "max_output_tokens", "top_p", "tools", "tool_choice", "text", "metadata", "stream", "user", "parallel_tool_calls"],
+      "unsupported_fields": ["background", "conversation", "include", "max_tool_calls", "previous_response_id", "prompt", "reasoning", "safety_identifier", "service_tier", "store", "truncation"]
+    }
+  ]
+}
