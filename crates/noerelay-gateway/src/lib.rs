@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 pub mod admin;
 pub mod iam;
 pub mod stub_provider;
@@ -1000,7 +1001,6 @@ fn canonical_content_text(content: &noerelay_core::wire::CanonicalContent) -> St
     }
 }
 
-#[allow(clippy::result_large_err)]
 async fn validate_requested_model(
     state: &AppState,
     identity: Option<&AuthenticatedIdentity>,
@@ -1119,7 +1119,6 @@ async fn create_durable_run(
     }))
 }
 
-#[allow(clippy::result_large_err)]
 async fn record_stub_attempt(
     state: &AppState,
     durable: Option<&DurableExecution>,
