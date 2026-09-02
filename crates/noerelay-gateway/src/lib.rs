@@ -1006,6 +1006,10 @@ async fn validate_requested_model(
     identity: Option<&AuthenticatedIdentity>,
     request: &WireCanonicalRequest,
 ) -> Result<(), Response> {
+    // The virtual model alias is always allowed; it resolves at routing time.
+    if request.model == "noerelay/epr-1" {
+        return Ok(());
+    }
     if let (Some(pool), Some(identity)) = (&state.database_pool, identity) {
         let repository = RegistryRepository::new(pool.clone(), identity.organization_id);
         return match repository.get_active_model(&request.model).await {

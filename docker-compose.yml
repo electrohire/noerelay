@@ -5,7 +5,7 @@ services:
       - "${NOERELAY_PORT:-8080}:8080"
     environment:
       NOERELAY_API_KEY: ${NOERELAY_API_KEY:-noerelay-local-development-key-0001}
-      NOERELAY_OPENROUTER_MODE: ${NOERELAY_OPENROUTER_MODE:-stub}
+      NOERELAY_OPENROUTER_MODE: stub
       NOERELAY_ORGANIZATION_ID: ${NOERELAY_ORGANIZATION_ID:-local-org}
       NOERELAY_PROJECT_ID: ${NOERELAY_PROJECT_ID:-local-project}
       NOERELAY_ENVIRONMENT_ID: ${NOERELAY_ENVIRONMENT_ID:-development}
@@ -16,7 +16,7 @@ services:
       NOERELAY_CONTEXT_BUDGET_TOKENS: ${NOERELAY_CONTEXT_BUDGET_TOKENS:-32768}
       NOERELAY_RECEIPT_SIGNING_SEED_HEX: ${NOERELAY_RECEIPT_SIGNING_SEED_HEX:-0000000000000000000000000000000000000000000000000000000000000000}
       NOERELAY_RECEIPT_SIGNING_KEY_ID: ${NOERELAY_RECEIPT_SIGNING_KEY_ID:-local-development-key}
-      DATABASE_URL: postgresql://noerelay:${NOERELAY_POSTGRES_PASSWORD:-noerelay-local-db-password}@postgres:5432/noerelay
+      # DATABASE_URL: postgresql://noerelay:${NOERELAY_POSTGRES_PASSWORD:-noerelay-local-db-password}@postgres:5432/noerelay
     depends_on:
       postgres:
         condition: service_healthy

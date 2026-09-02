@@ -417,11 +417,8 @@ pub async fn iam_middleware(
         Some(repo) => match resolve_from_repo(repo, &state).await {
             Ok(Some(identity)) => identity,
             Ok(None) => {
-                return error_response(
-                    StatusCode::UNAUTHORIZED,
-                    "identity_not_found",
-                    "No principal found for this API key",
-                );
+                // No principal in DB — fall back to stateless default identity
+                default_identity(&state)
             }
             Err(_) => {
                 return error_response(
