@@ -1000,6 +1000,7 @@ fn canonical_content_text(content: &noerelay_core::wire::CanonicalContent) -> St
     }
 }
 
+#[allow(clippy::result_large_err)]
 async fn validate_requested_model(
     state: &AppState,
     identity: Option<&AuthenticatedIdentity>,
