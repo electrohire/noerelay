@@ -1118,6 +1118,7 @@ async fn create_durable_run(
     }))
 }
 
+#[allow(clippy::result_large_err)]
 async fn record_stub_attempt(
     state: &AppState,
     durable: Option<&DurableExecution>,

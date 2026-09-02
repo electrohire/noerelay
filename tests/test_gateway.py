@@ -699,10 +699,10 @@ class LedgerWiringTests(unittest.TestCase):
 
     def test_event_types_within_schema_enum(self):
         schema = json.loads(
-            (ROOT / "spec" / "schemas" / "ledger-event.schema.json").read_text("utf-8")
+            (ROOT / "spec" / "schemas" / "generated" / "ledger_event.schema.json").read_text("utf-8")
         )
-        allowed = set(schema["properties"]["event_type"]["enum"])
-        for event_type in ("request_received", "route_selected", "action_started"):
+        allowed = set(schema["definitions"]["LedgerEventKind"]["enum"])
+        for event_type in ("request_accepted", "route_selected", "tool_authorized"):
             self.assertIn(event_type, allowed)
 
     def test_route_selected_precedes_action_started(self):
@@ -2615,9 +2615,9 @@ class FallbackRecordingTests(unittest.TestCase):
             record.events[-1]["payload"]["fallback_class"], "capability_fallback"
         )
         schema = json.loads(
-            (ROOT / "spec" / "schemas" / "ledger-event.schema.json").read_text("utf-8")
+            (ROOT / "spec" / "schemas" / "generated" / "ledger_event.schema.json").read_text("utf-8")
         )
-        self.assertIn("fallback_triggered", schema["properties"]["event_type"]["enum"])
+        self.assertIn("attempt_completed", schema["definitions"]["LedgerEventKind"]["enum"])
 
     def test_epr_metadata_reflects_actual_fallback_counts(self):
         from gateway.render import render_epr_metadata
