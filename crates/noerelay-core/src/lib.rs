@@ -37,27 +37,24 @@ pub use budget::{BudgetAccount, BudgetError, BudgetReservation};
 pub use context::{ContextCompiler, ContextError, ContextManifest, ContextNode, NodeKind};
 pub use contract::{ContractCompiler, ContractError, TaskContract};
 pub use epistemic::{Claim, ClaimKind, EpistemicState, EvidencePolarity};
-pub use evaluator_ingestion::{
-    HookResult, NoerelayAction, SpecKitHook, map_outcome_to_action,
-};
+pub use evaluator_ingestion::{HookResult, NoerelayAction, SpecKitHook, map_outcome_to_action};
 pub use evaluator_result::{
-    EvaluatorInfo, EvaluatorMetadata, EvaluatorOutcome, EvaluatorPhase, EvaluatorResult,
-    EvidenceKind as EvaluatorEvidenceKind, EvidenceRef as EvaluatorEvidenceRef, Finding,
-    FindingKind, FindingSeverity, NextAction, RecommendedAction, Uncertainty,
-    EVALUATOR_SCHEMA_VERSION,
+    EVALUATOR_SCHEMA_VERSION, EvaluatorInfo, EvaluatorMetadata, EvaluatorOutcome, EvaluatorPhase,
+    EvaluatorResult, EvidenceKind as EvaluatorEvidenceKind, EvidenceRef as EvaluatorEvidenceRef,
+    Finding, FindingKind, FindingSeverity, NextAction, RecommendedAction, Uncertainty,
 };
 pub use evidence::{EnvelopeStatus, EvidenceEnvelope};
 pub use execution::*;
 pub use governance::*;
 pub use iam::*;
 pub use ledger::{
-    ActorIdentity, Checkpoint, EventSignature, Ledger, LedgerError, LedgerEvent,
-    LedgerEventKind, MerkleProof,
+    ActorIdentity, Checkpoint, EventSignature, Ledger, LedgerError, LedgerEvent, LedgerEventKind,
+    MerkleProof,
 };
 pub use ranking::{
     AdmissibleCandidate, AdviceValidationError, AdvisoryRanker, CandidateRanking,
-    RankingAdvice, RankingContext, RankingMode, RankerError, RankerIdentity,
-    RANKING_ADVICE_SCHEMA_VERSION, candidate_set_hash, features_hash, validate_advice,
+    RANKING_ADVICE_SCHEMA_VERSION, RankerError, RankerIdentity, RankingAdvice, RankingContext,
+    RankingMode, candidate_set_hash, features_hash, validate_advice,
 };
 pub use receipt::{ReceiptSignatureError, ReceiptSigner, ReceiptVerifier, SignedRunReceipt};
 pub use recommendation::{ModelObservation, Recommendation, Recommender};
@@ -67,8 +64,8 @@ pub use registry::{
     RegistryLifecycle, ToolRevision as RegistryToolRevision,
 };
 pub use routing::{
-    Candidate, CandidateRejection, Constraints, RankingProvenance, RejectionReason,
-    RouteDecision, Router, StagedRouteDecision, StagedRouter,
+    Candidate, CandidateRejection, Constraints, RankingProvenance, RejectionReason, RouteDecision,
+    Router, StagedRouteDecision, StagedRouter,
 };
 pub use runtime::{
     Completion, GovernanceRuntime, GovernanceSnapshot, PreparedRun, RunReceipt, RuntimeError,

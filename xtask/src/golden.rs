@@ -241,6 +241,13 @@ impl Sample for LedgerEvent {
             previous_hash: "0000000000000000000000000000000000000000000000000000000000000000"
                 .into(),
             event_hash: "a".repeat(64),
+            epistemic_kind: None,
+            epistemic_status: None,
+            subject_refs: None,
+            actor: None,
+            policy_revision: None,
+            payload_hash: None,
+            signature: None,
         }
     }
 }

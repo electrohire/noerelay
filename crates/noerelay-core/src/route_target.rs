@@ -4,7 +4,7 @@
 //! represent either a cloud model (existing behavior) or a governed local agent
 //! (new behavior per mission §9).
 
-use crate::registry::{AgentRevision, ModelRevision};
+use crate::registry::AgentRevision;
 use crate::routing::Candidate;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

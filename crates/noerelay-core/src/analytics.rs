@@ -126,10 +126,7 @@ pub mod core_metrics {
             exclusions: vec![],
             time_basis: "per_day".into(),
             dimensions: vec!["risk_class".into(), "cohort".into()],
-            source_event_types: vec![
-                "verification_observed".into(),
-                "claim_transitioned".into(),
-            ],
+            source_event_types: vec!["verification_observed".into(), "claim_transitioned".into()],
         }
     }
 }

@@ -362,7 +362,10 @@ impl Ledger {
             }
             hashes = next;
         }
-        hashes.first().cloned().unwrap_or_else(|| GENESIS_HASH.into())
+        hashes
+            .first()
+            .cloned()
+            .unwrap_or_else(|| GENESIS_HASH.into())
     }
 
     /// Produce a Merkle proof for the event at the given sequence number.
@@ -393,7 +396,10 @@ impl Ledger {
             hashes = next;
         }
         Some(MerkleProof {
-            root_hash: hashes.first().cloned().unwrap_or_else(|| GENESIS_HASH.into()),
+            root_hash: hashes
+                .first()
+                .cloned()
+                .unwrap_or_else(|| GENESIS_HASH.into()),
             leaf_index: sequence,
             siblings,
         })

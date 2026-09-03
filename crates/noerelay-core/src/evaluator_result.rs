@@ -331,9 +331,7 @@ impl EvaluatorResult {
         let has_critical = findings
             .iter()
             .any(|f| f.severity == FindingSeverity::Critical);
-        let has_high = findings
-            .iter()
-            .any(|f| f.severity == FindingSeverity::High);
+        let has_high = findings.iter().any(|f| f.severity == FindingSeverity::High);
         let has_medium = findings
             .iter()
             .any(|f| f.severity == FindingSeverity::Medium);
@@ -400,11 +398,7 @@ impl EvaluatorResult {
         }
         let parts: Vec<String> = ["critical", "high", "medium", "low", "info"]
             .iter()
-            .filter_map(|sev| {
-                by_sev
-                    .get(sev)
-                    .map(|count| format!("{count} {sev}"))
-            })
+            .filter_map(|sev| by_sev.get(sev).map(|count| format!("{count} {sev}")))
             .collect();
         format!(
             "{evaluator_id} found {} issue(s) ({}). Outcome: {outcome:?}.",

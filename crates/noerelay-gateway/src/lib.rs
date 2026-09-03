@@ -14,11 +14,10 @@ use axum::{
 use noerelay_core::{
     AdmissibleCandidate, AdvisoryRanker, ApiError, AuthenticatedIdentity, Candidate,
     CanonicalRequest, ChatCompletionsConverter, CheckResult, CheckStatus, Constraints,
-    ContextCompiler, ContextNode, DataClass, Evidence, GovernanceRuntime, IdentityScope,
-    Message, MessageRole, NodeKind, RankingContext, RankingMode, ReceiptSignatureError,
-    ReceiptSigner, ReleaseOutcome, Requirement, ResponsesConverter, RiskClass,
-    RouteDecision, RuntimeError, SignedRunReceipt, StagedRouter, TestCase, TraceGraph,
-    UsageMeasurement, WireCanonicalRequest,
+    ContextCompiler, ContextNode, DataClass, Evidence, GovernanceRuntime, IdentityScope, Message,
+    MessageRole, NodeKind, RankingContext, RankingMode, ReceiptSignatureError, ReceiptSigner,
+    ReleaseOutcome, Requirement, ResponsesConverter, RiskClass, RouteDecision, RuntimeError,
+    SignedRunReceipt, StagedRouter, TestCase, TraceGraph, UsageMeasurement, WireCanonicalRequest,
 };
 use noerelay_store::{
     CostRollupRow, ExecutionRepository, IamRepository, PostgresAuthorityStore, RegistryRepository,
@@ -307,9 +306,10 @@ impl AppState {
             .redirect(reqwest::redirect::Policy::none())
             .build()?;
         let budget_limit_microusd = config.budget_limit_microusd;
-        let ranker_client = config.ranker_sidecar_url.as_ref().map(|url| {
-            RankerClient::new(url.clone(), Duration::from_secs(5))
-        });
+        let ranker_client = config
+            .ranker_sidecar_url
+            .as_ref()
+            .map(|url| RankerClient::new(url.clone(), Duration::from_secs(5)));
         Ok(Self {
             config: Arc::new(config),
             client,
@@ -366,9 +366,10 @@ impl AppState {
                 oidc_providers.push(Arc::new(provider));
             }
         }
-        let ranker_client = config.ranker_sidecar_url.as_ref().map(|url| {
-            RankerClient::new(url.clone(), Duration::from_secs(5))
-        });
+        let ranker_client = config
+            .ranker_sidecar_url
+            .as_ref()
+            .map(|url| RankerClient::new(url.clone(), Duration::from_secs(5)));
         Ok(Self {
             config: Arc::new(config),
             client,
@@ -418,7 +419,10 @@ impl AppState {
             None
         };
 
-        let ranker: Option<&dyn AdvisoryRanker> = self.ranker_client.as_ref().map(|c| c as &dyn AdvisoryRanker);
+        let ranker: Option<&dyn AdvisoryRanker> = self
+            .ranker_client
+            .as_ref()
+            .map(|c| c as &dyn AdvisoryRanker);
         let staged_decision = router.select_with_ranking(
             &self.config.candidates,
             constraints,
@@ -1472,17 +1476,10 @@ fn build_evaluator_result(
                     recommended_action: Some("gather_evidence".into()),
                     finding_severity: Some("medium".into()),
                     finding_kind: Some("missing_evidence".into()),
-                    description: Some(format!(
-                        "Check '{}' was not executed.",
-                        check.check_id
-                    )),
+                    description: Some(format!("Check '{}' was not executed.", check.check_id)),
                     rationale: None,
                 });
-            noerelay_core::Finding::from_check_result(
-                &result,
-                &check.kind,
-                &prepared.run_id,
-            )
+            noerelay_core::Finding::from_check_result(&result, &check.kind, &prepared.run_id)
         })
         .collect();
 

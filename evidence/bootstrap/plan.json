@@ -1,0 +1,9 @@
+{
+  "gateway_mode": "live",
+  "max_cycles": 5,
+  "auto_apply": true,
+  "quick": false,
+  "full": false,
+  "api_key": "noerelay-local-development-key-0001",
+  "created_at": "2026-09-03T15:09:35.996505+00:00"
+}

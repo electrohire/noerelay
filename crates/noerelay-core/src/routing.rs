@@ -319,13 +319,11 @@ impl StagedRouteDecision {
 /// When ranking is disabled or the ranker fails, the output is identical to
 /// the existing [`Router::select`].
 #[derive(Debug, Default, Clone)]
-pub struct StagedRouter {
-    inner: Router,
-}
+pub struct StagedRouter;
 
 impl StagedRouter {
     pub fn new() -> Self {
-        Self { inner: Router }
+        Self
     }
 
     /// Select a candidate with optional advisory ranking.
@@ -407,12 +405,11 @@ impl StagedRouter {
 
                                 if mode == crate::ranking::RankingMode::Advisory {
                                     // Reorder admissible candidates by ranker scores
-                                    let score_map: std::collections::BTreeMap<&str, u32> =
-                                        advice
-                                            .candidate_scores
-                                            .iter()
-                                            .map(|cr| (cr.candidate_id.as_str(), cr.score_ppm))
-                                            .collect();
+                                    let score_map: std::collections::BTreeMap<&str, u32> = advice
+                                        .candidate_scores
+                                        .iter()
+                                        .map(|cr| (cr.candidate_id.as_str(), cr.score_ppm))
+                                        .collect();
 
                                     admissible.sort_by(|(a, a_cost), (b, b_cost)| {
                                         let score_a =
@@ -428,9 +425,10 @@ impl StagedRouter {
                                                 a_cost
                                                     .cmp(b_cost)
                                                     .then(a.latency_p95_ms.cmp(&b.latency_p95_ms))
-                                                    .then(b.acceptance_lcb_ppm.cmp(
-                                                        &a.acceptance_lcb_ppm,
-                                                    ))
+                                                    .then(
+                                                        b.acceptance_lcb_ppm
+                                                            .cmp(&a.acceptance_lcb_ppm),
+                                                    )
                                                     .then(a.candidate_id.cmp(&b.candidate_id))
                                             }
                                         }
@@ -438,7 +436,8 @@ impl StagedRouter {
 
                                     // Check if top pick changed
                                     let top_id = admissible.first().map(|(c, _)| &c.candidate_id);
-                                    let advice_top = advice.candidate_scores.first().map(|cr| &cr.candidate_id);
+                                    let advice_top =
+                                        advice.candidate_scores.first().map(|cr| &cr.candidate_id);
                                     provenance.advice_followed = top_id == advice_top;
                                     if !provenance.advice_followed {
                                         provenance.override_reason = Some(
@@ -469,8 +468,7 @@ impl StagedRouter {
         let selected = admissible.first();
         let decision = RouteDecision {
             selected_candidate_id: selected.map(|(c, _)| c.candidate_id.clone()),
-            selected_openrouter_model_id: selected
-                .map(|(c, _)| c.openrouter_model_id.clone()),
+            selected_openrouter_model_id: selected.map(|(c, _)| c.openrouter_model_id.clone()),
             expected_total_cost_microusd: selected.map(|(_, total)| *total),
             rejections,
         };
@@ -483,8 +481,8 @@ impl StagedRouter {
 mod staged_tests {
     use super::*;
     use crate::ranking::{
-        AdmissibleCandidate, AdvisoryRanker, RankingAdvice, RankingContext, RankingMode,
-        RankerError,
+        AdmissibleCandidate, AdvisoryRanker, RankerError, RankingAdvice, RankingContext,
+        RankingMode,
     };
 
     struct StubRanker {
@@ -564,10 +562,7 @@ mod staged_tests {
             RankingMode::Disabled,
             None,
         );
-        assert_eq!(
-            staged.selected_candidate_id,
-            baseline.selected_candidate_id
-        );
+        assert_eq!(staged.selected_candidate_id, baseline.selected_candidate_id);
         assert!(!staged.ranking_provenance.ranker_consulted);
     }
 

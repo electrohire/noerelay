@@ -181,7 +181,10 @@ pub fn validate_dispatch(
     // Check delegation depth
     if let Some(limit) = config.delegation_limit {
         if delegation_depth > limit {
-            return Err(DispatchError::DelegationDepthExceeded(delegation_depth, limit));
+            return Err(DispatchError::DelegationDepthExceeded(
+                delegation_depth,
+                limit,
+            ));
         }
     }
 
@@ -339,7 +342,15 @@ mod tests {
         let mut config = test_config();
         config.endpoint = String::new();
         assert_eq!(
-            validate_dispatch(&config, &["coding".into()], None, DataClass::Internal, 1_000, 0, 0),
+            validate_dispatch(
+                &config,
+                &["coding".into()],
+                None,
+                DataClass::Internal,
+                1_000,
+                0,
+                0
+            ),
             Err(DispatchError::NoEndpoint)
         );
     }

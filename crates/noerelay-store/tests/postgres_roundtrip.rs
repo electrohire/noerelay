@@ -90,6 +90,13 @@ async fn committed_authority_reloads_with_receipt_and_valid_chain() {
                 status: CheckStatus::Passed,
                 observed_evidence_id: Some("observed-response".into()),
                 verifier_family: None,
+                evidence_kind: None,
+                uncertainty: None,
+                recommended_action: None,
+                finding_severity: None,
+                finding_kind: None,
+                description: None,
+                rationale: None,
             }],
             2,
         )

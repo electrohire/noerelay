@@ -754,9 +754,17 @@ fn parse_message(value: &Value) -> Result<CanonicalMessage, Vec<ApiError>> {
             Some("messages"),
         )]
     })?;
-    let allowed: HashSet<&str> = ["role", "content", "tool_calls", "tool_call_id", "name", "reasoning_content", "reasoning_details"]
-        .into_iter()
-        .collect();
+    let allowed: HashSet<&str> = [
+        "role",
+        "content",
+        "tool_calls",
+        "tool_call_id",
+        "name",
+        "reasoning_content",
+        "reasoning_details",
+    ]
+    .into_iter()
+    .collect();
     if let Some(field) = object
         .keys()
         .find(|field| !allowed.contains(field.as_str()))

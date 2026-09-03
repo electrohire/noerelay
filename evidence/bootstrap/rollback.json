@@ -1,0 +1,17 @@
+{
+  "failed_cycle": 2,
+  "error": "======================================================================\n  NoeRelay Self-Improvement Orchestrator\n  Started: 2026-09-03T15:24:36.137732+00:00\n  Gateway: http://127.0.0.1:8080\n  Max cycles: 1\n  Convergence window: 3\n  Convergence delta: 0.005\n  Dry run: False\n  Auto-apply: True\n  Cohorts: quick-test, coding-tasks, reasoning-tasks, safety-tasks\n  State dir: evidence\\self-improve\n======================================================================\n\n\n=================================",
+  "actions_applied_this_cycle": [],
+  "rollback_actions": [
+    {
+      "action": "restart_gateway",
+      "description": "Restart gateway in live mode"
+    },
+    {
+      "action": "restart_sidecar",
+      "description": "Restart LLMRouter sidecar if running"
+    }
+  ],
+  "state_snapshot": {},
+  "timestamp": "2026-09-03T15:24:36.151311+00:00"
+}

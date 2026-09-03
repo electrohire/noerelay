@@ -211,10 +211,7 @@ pub enum AdviceValidationError {
     #[error("advice is not marked as advisory-only")]
     NotAdvisoryOnly,
     #[error("advice has expired (expires_at={expires_at_ms}, now={now_ms})")]
-    Expired {
-        expires_at_ms: u64,
-        now_ms: u64,
-    },
+    Expired { expires_at_ms: u64, now_ms: u64 },
     #[error("candidate set hash mismatch: expected {expected}, got {actual}")]
     CandidateSetHashMismatch { expected: String, actual: String },
     #[error("features hash mismatch: expected {expected}, got {actual}")]
@@ -333,8 +330,7 @@ pub fn candidate_set_hash(candidates: &[AdmissibleCandidate]) -> String {
 
 /// Compute the features hash over a JSON value.
 pub fn features_hash(features: &serde_json::Value) -> String {
-    let material =
-        serde_json::to_vec(features).expect("features are serializable");
+    let material = serde_json::to_vec(features).expect("features are serializable");
     hex::encode(Sha256::digest(material))
 }
 
@@ -424,7 +420,13 @@ mod tests {
         let advice = valid_advice();
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_001_500),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_001_500
+            ),
             Ok(())
         );
     }
@@ -435,8 +437,16 @@ mod tests {
         advice.schema_version = "0.9.0".into();
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_001_500),
-            Err(AdviceValidationError::UnsupportedSchemaVersion("0.9.0".into()))
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_001_500
+            ),
+            Err(AdviceValidationError::UnsupportedSchemaVersion(
+                "0.9.0".into()
+            ))
         );
     }
 
@@ -446,7 +456,13 @@ mod tests {
         advice.advisory_only = false;
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_001_500),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_001_500
+            ),
             Err(AdviceValidationError::NotAdvisoryOnly)
         );
     }
@@ -457,7 +473,13 @@ mod tests {
         advice.expires_at_unix_ms = Some(1_700_000_001_000);
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_002_000),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_002_000
+            ),
             Err(AdviceValidationError::Expired {
                 expires_at_ms: 1_700_000_001_000,
                 now_ms: 1_700_000_002_000,
@@ -471,7 +493,13 @@ mod tests {
         advice.expires_at_unix_ms = None;
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_999_000),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_999_000
+            ),
             Ok(())
         );
     }
@@ -499,7 +527,13 @@ mod tests {
         let advice = valid_advice();
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "wrong-features", &csh, 1_700_000_001_500),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "wrong-features",
+                &csh,
+                1_700_000_001_500
+            ),
             Err(AdviceValidationError::FeaturesHashMismatch {
                 expected: "wrong-features".into(),
                 actual: "abc123".into(),
@@ -517,8 +551,16 @@ mod tests {
         });
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_001_500),
-            Err(AdviceValidationError::UnknownCandidate("model-unknown".into()))
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_001_500
+            ),
+            Err(AdviceValidationError::UnknownCandidate(
+                "model-unknown".into()
+            ))
         );
     }
 
@@ -532,7 +574,13 @@ mod tests {
         });
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_001_500),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_001_500
+            ),
             Err(AdviceValidationError::DuplicateCandidate("model-a".into()))
         );
     }
@@ -543,7 +591,13 @@ mod tests {
         advice.candidate_scores[0].score_ppm = 1_000_001;
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_001_500),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_001_500
+            ),
             Err(AdviceValidationError::ScoreOutOfBounds {
                 candidate_id: "model-c".into(),
                 score_ppm: 1_000_001,
@@ -558,7 +612,13 @@ mod tests {
         advice.candidate_scores.clear();
         let csh = advice.candidate_set_hash.clone();
         assert_eq!(
-            validate_advice(&advice, &admissible_ids(), "abc123", &csh, 1_700_000_001_500),
+            validate_advice(
+                &advice,
+                &admissible_ids(),
+                "abc123",
+                &csh,
+                1_700_000_001_500
+            ),
             Err(AdviceValidationError::EmptyScores)
         );
     }
