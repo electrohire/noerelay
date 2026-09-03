@@ -12,10 +12,10 @@ use axum::{
     routing::{get, post},
 };
 use noerelay_core::{
-    AdvisoryRanker, ApiError, AuthenticatedIdentity, Candidate, CanonicalRequest,
-    ChatCompletionsConverter, CheckResult, CheckStatus, Constraints, ContextCompiler,
-    ContextNode, DataClass, Evidence, GovernanceRuntime, IdentityScope, Message,
-    MessageRole, NodeKind, RankingContext, RankingMode, ReceiptSignatureError,
+    AdmissibleCandidate, AdvisoryRanker, ApiError, AuthenticatedIdentity, Candidate,
+    CanonicalRequest, ChatCompletionsConverter, CheckResult, CheckStatus, Constraints,
+    ContextCompiler, ContextNode, DataClass, Evidence, GovernanceRuntime, IdentityScope,
+    Message, MessageRole, NodeKind, RankingContext, RankingMode, ReceiptSignatureError,
     ReceiptSigner, ReleaseOutcome, Requirement, ResponsesConverter, RiskClass,
     RouteDecision, RuntimeError, SignedRunReceipt, StagedRouter, TestCase, TraceGraph,
     UsageMeasurement, WireCanonicalRequest,
@@ -39,6 +39,75 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::stub_provider::StubProvider;
+
+/// HTTP client for the LLMRouter sidecar, implementing [`AdvisoryRanker`].
+///
+/// Calls `POST /rank` on the sidecar with sanitized features and admissible
+/// candidates. Handles timeouts, errors, and circuit breaking.
+#[derive(Debug, Clone)]
+pub struct RankerClient {
+    sidecar_url: String,
+    timeout: Duration,
+}
+
+impl RankerClient {
+    pub fn new(sidecar_url: String, timeout: Duration) -> Self {
+        Self {
+            sidecar_url: sidecar_url.trim_end_matches('/').to_owned(),
+            timeout,
+        }
+    }
+}
+
+impl AdvisoryRanker for RankerClient {
+    fn rank(
+        &self,
+        context: &RankingContext,
+        candidates: &[AdmissibleCandidate],
+    ) -> Result<Option<noerelay_core::RankingAdvice>, noerelay_core::RankerError> {
+        let url = format!("{}/rank", self.sidecar_url);
+        let body = serde_json::json!({
+            "cohort": context.cohort,
+            "features": context.features,
+            "candidates": candidates,
+        });
+        let body_bytes = serde_json::to_vec(&body)
+            .map_err(|e| noerelay_core::RankerError::MalformedResponse(e.to_string()))?;
+
+        let client = reqwest::blocking::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|_| noerelay_core::RankerError::Unavailable)?;
+
+        let response = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .body(body_bytes)
+            .send()
+            .map_err(|e| {
+                if e.is_timeout() {
+                    noerelay_core::RankerError::Timeout(self.timeout.as_millis() as u64)
+                } else if e.is_connect() {
+                    noerelay_core::RankerError::Unavailable
+                } else {
+                    noerelay_core::RankerError::MalformedResponse(e.to_string())
+                }
+            })?;
+
+        if !response.status().is_success() {
+            return Err(noerelay_core::RankerError::MalformedResponse(format!(
+                "sidecar returned status {}",
+                response.status()
+            )));
+        }
+
+        let advice: noerelay_core::RankingAdvice = response
+            .json()
+            .map_err(|e| noerelay_core::RankerError::MalformedResponse(e.to_string()))?;
+
+        Ok(Some(advice))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct GatewayConfig {
@@ -206,6 +275,7 @@ pub struct AppState {
     database_pool: Option<PgPool>,
     execution_repo: Option<ExecutionRepository>,
     storage_version: Arc<Mutex<i64>>,
+    ranker_client: Option<RankerClient>,
 }
 
 #[derive(Debug, Error)]
@@ -237,6 +307,9 @@ impl AppState {
             .redirect(reqwest::redirect::Policy::none())
             .build()?;
         let budget_limit_microusd = config.budget_limit_microusd;
+        let ranker_client = config.ranker_sidecar_url.as_ref().map(|url| {
+            RankerClient::new(url.clone(), Duration::from_secs(5))
+        });
         Ok(Self {
             config: Arc::new(config),
             client,
@@ -249,6 +322,7 @@ impl AppState {
             database_pool: None,
             execution_repo: None,
             storage_version: Arc::new(Mutex::new(0)),
+            ranker_client,
         })
     }
 
@@ -292,6 +366,9 @@ impl AppState {
                 oidc_providers.push(Arc::new(provider));
             }
         }
+        let ranker_client = config.ranker_sidecar_url.as_ref().map(|url| {
+            RankerClient::new(url.clone(), Duration::from_secs(5))
+        });
         Ok(Self {
             config: Arc::new(config),
             client,
@@ -304,6 +381,7 @@ impl AppState {
             database_pool: Some(pool.clone()),
             execution_repo: Some(ExecutionRepository::new(pool)),
             storage_version: Arc::new(Mutex::new(version)),
+            ranker_client,
         })
     }
 
@@ -340,7 +418,7 @@ impl AppState {
             None
         };
 
-        let ranker: Option<&dyn AdvisoryRanker> = None; // Sidecar client not yet connected
+        let ranker: Option<&dyn AdvisoryRanker> = self.ranker_client.as_ref().map(|c| c as &dyn AdvisoryRanker);
         let staged_decision = router.select_with_ranking(
             &self.config.candidates,
             constraints,
@@ -1687,7 +1765,7 @@ mod tests {
             ranking_mode: RankingMode::Disabled,
             ranker_sidecar_url: None,
         })
-        .unwrap()
+        .expect("test state")
     }
 
     fn authenticated_request(method: &str, uri: &str, body: Body) -> Request<Body> {

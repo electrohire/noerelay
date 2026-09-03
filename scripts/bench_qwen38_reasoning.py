@@ -11,7 +11,7 @@ with open("benchmarks/reasoning-tasks.jsonl", "r") as f:
 
 print(f"Loaded {len(cases)} reasoning cases\n")
 
-model = "qwen3.8:27b"
+model = "deepseek-r1:32b"
 correct = 0
 total_latency = 0.0
 total_tokens = 0

@@ -34,6 +34,36 @@ pub struct LedgerEvent {
     pub payload: Value,
     pub previous_hash: String,
     pub event_hash: String,
+    /// Epistemic kind: observation, inference, decision, preference, artifact, requirement, assumption.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub epistemic_kind: Option<String>,
+    /// Epistemic status: unknown, supported, refuted, conflicted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub epistemic_status: Option<String>,
+    /// References to subjects (claims, artifacts, decisions) this event relates to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject_refs: Option<Vec<String>>,
+    /// Actor that produced this event.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actor: Option<ActorIdentity>,
+    /// Policy revision active when this event was recorded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_revision: Option<String>,
+    /// SHA-256 hash of the canonical payload bytes (separate from event_hash).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload_hash: Option<String>,
+    /// Cryptographic signature on this event.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature: Option<EventSignature>,
+}
+
+/// Identity of the actor that produced a ledger event.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ActorIdentity {
+    pub kind: String,
+    pub id: String,
+    pub revision: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -108,6 +138,13 @@ impl Ledger {
             payload,
             previous_hash,
             event_hash,
+            epistemic_kind: None,
+            epistemic_status: None,
+            subject_refs: None,
+            actor: None,
+            policy_revision: None,
+            payload_hash: None,
+            signature: None,
         });
         Ok(self.events.last().expect("event was appended"))
     }

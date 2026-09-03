@@ -51,7 +51,8 @@ pub use execution::*;
 pub use governance::*;
 pub use iam::*;
 pub use ledger::{
-    Checkpoint, EventSignature, Ledger, LedgerError, LedgerEvent, LedgerEventKind, MerkleProof,
+    ActorIdentity, Checkpoint, EventSignature, Ledger, LedgerError, LedgerEvent,
+    LedgerEventKind, MerkleProof,
 };
 pub use ranking::{
     AdmissibleCandidate, AdviceValidationError, AdvisoryRanker, CandidateRanking,
