@@ -12,11 +12,13 @@ use axum::{
     routing::{get, post},
 };
 use noerelay_core::{
-    ApiError, AuthenticatedIdentity, Candidate, CanonicalRequest, ChatCompletionsConverter,
-    CheckResult, CheckStatus, Constraints, ContextCompiler, ContextNode, DataClass, Evidence,
-    GovernanceRuntime, IdentityScope, Message, MessageRole, NodeKind, ReceiptSignatureError,
-    ReceiptSigner, ReleaseOutcome, Requirement, ResponsesConverter, RiskClass, RuntimeError,
-    SignedRunReceipt, TestCase, TraceGraph, UsageMeasurement, WireCanonicalRequest,
+    AdvisoryRanker, ApiError, AuthenticatedIdentity, Candidate, CanonicalRequest,
+    ChatCompletionsConverter, CheckResult, CheckStatus, Constraints, ContextCompiler,
+    ContextNode, DataClass, Evidence, GovernanceRuntime, IdentityScope, Message,
+    MessageRole, NodeKind, RankingContext, RankingMode, ReceiptSignatureError,
+    ReceiptSigner, ReleaseOutcome, Requirement, ResponsesConverter, RiskClass,
+    RouteDecision, RuntimeError, SignedRunReceipt, StagedRouter, TestCase, TraceGraph,
+    UsageMeasurement, WireCanonicalRequest,
 };
 use noerelay_store::{
     CostRollupRow, ExecutionRepository, IamRepository, PostgresAuthorityStore, RegistryRepository,
@@ -52,6 +54,8 @@ pub struct GatewayConfig {
     pub database_url: Option<String>,
     pub receipt_signer: ReceiptSigner,
     pub context_budget_tokens: u32,
+    pub ranking_mode: RankingMode,
+    pub ranker_sidecar_url: Option<String>,
 }
 
 #[derive(Debug, Error)]
@@ -148,6 +152,18 @@ impl GatewayConfig {
             .ok()
             .filter(|value| *value > 0)
             .ok_or(ConfigError::InvalidBudget)?;
+        let ranking_mode = match std::env::var("NOERELAY_RANKING_MODE")
+            .unwrap_or_else(|_| "disabled".into())
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "shadow" => RankingMode::Shadow,
+            "advisory" => RankingMode::Advisory,
+            _ => RankingMode::Disabled,
+        };
+        let ranker_sidecar_url = std::env::var("NOERELAY_RANKER_SIDECAR_URL")
+            .ok()
+            .filter(|v| !v.trim().is_empty());
         Ok(Self {
             bearer_key_sha256: Sha256::digest(api_key.as_bytes()).into(),
             openrouter_api_key,
@@ -164,6 +180,8 @@ impl GatewayConfig {
             database_url,
             receipt_signer,
             context_budget_tokens,
+            ranking_mode,
+            ranker_sidecar_url,
         })
     }
 }
@@ -296,8 +314,50 @@ impl AppState {
     ) -> Result<noerelay_core::PreparedRun, AuthorityError> {
         let mut authority = self.runtime.lock().await;
         let mut staged = authority.clone();
-        let prepared =
-            staged.prepare(request, &self.config.candidates, constraints, now_unix_ms())?;
+
+        // Use StagedRouter with optional advisory ranking
+        let router = StagedRouter::new();
+        let ranking_context = if self.config.ranking_mode != RankingMode::Disabled {
+            Some(RankingContext {
+                cohort: request
+                    .metadata
+                    .get("cohort")
+                    .cloned()
+                    .unwrap_or_else(|| "default".into())
+                    .to_string(),
+                features: serde_json::json!({
+                    "risk": format!("{:?}", request.risk),
+                    "data_class": format!("{:?}", request.data_class),
+                    "capabilities": request.required_capabilities,
+                }),
+                features_hash: noerelay_core::features_hash(&serde_json::json!({
+                    "risk": format!("{:?}", request.risk),
+                    "data_class": format!("{:?}", request.data_class),
+                    "capabilities": request.required_capabilities,
+                })),
+            })
+        } else {
+            None
+        };
+
+        let ranker: Option<&dyn AdvisoryRanker> = None; // Sidecar client not yet connected
+        let staged_decision = router.select_with_ranking(
+            &self.config.candidates,
+            constraints,
+            ranker,
+            self.config.ranking_mode,
+            ranking_context.as_ref(),
+        );
+
+        // Convert StagedRouteDecision to RouteDecision for GovernanceRuntime
+        let route = RouteDecision {
+            selected_candidate_id: staged_decision.selected_candidate_id,
+            selected_openrouter_model_id: staged_decision.selected_openrouter_model_id,
+            expected_total_cost_microusd: staged_decision.expected_total_cost_microusd,
+            rejections: staged_decision.rejections,
+        };
+
+        let prepared = staged.prepare_with_decision(request, route, now_unix_ms())?;
         self.persist_staged(&staged, None).await?;
         *authority = staged;
         Ok(prepared)
@@ -1624,6 +1684,8 @@ mod tests {
             database_url: None,
             receipt_signer: ReceiptSigner::from_seed("test-key", [3; 32]).unwrap(),
             context_budget_tokens: 32_768,
+            ranking_mode: RankingMode::Disabled,
+            ranker_sidecar_url: None,
         })
         .unwrap()
     }

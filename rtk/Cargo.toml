@@ -1,15 +1,15 @@
 [package]
-name = "noerelay-rtk"
+name = "noerelay-compact"
 version = "0.1.0"
 edition = "2021"
-description = "Rust Token Killer — native compression for the NoeRelay gateway"
+description = "Context compaction for the NoeRelay gateway (formerly RTK)"
 license = "MIT"
 
 [dependencies]
 pyo3 = { version = "0.21", features = ["extension-module"] }
 
 [lib]
-name = "noerelay_rtk"
+name = "noerelay_compact"
 crate-type = ["cdylib"]
 
 [profile.release]

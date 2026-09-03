@@ -47,6 +47,8 @@ fn application() -> axum::Router {
         database_url: None,
         receipt_signer: ReceiptSigner::from_seed("api-02-test", [7; 32]).unwrap(),
         context_budget_tokens: 32_768,
+        ranking_mode: noerelay_core::RankingMode::Disabled,
+        ranker_sidecar_url: None,
     })
     .unwrap();
     app(state)

@@ -60,7 +60,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "noerelay-rtk"
+name = "noerelay-compact"
 version = "0.1.0"
 dependencies = [
  "pyo3",

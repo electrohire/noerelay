@@ -262,4 +262,169 @@ mod tests {
             .unwrap_err();
         assert_eq!(error, LedgerError::FloatingPointPayload);
     }
+
+    #[test]
+    fn merkle_root_is_deterministic() {
+        let value = ledger();
+        let root1 = value.merkle_root();
+        let root2 = value.merkle_root();
+        assert_eq!(root1, root2);
+    }
+
+    #[test]
+    fn merkle_proof_verifies() {
+        let value = ledger();
+        let proof = value.prove(1).unwrap();
+        assert!(value.verify_proof(&proof, &value.events[0].event_hash));
+    }
+
+    #[test]
+    fn merkle_proof_rejects_wrong_hash() {
+        let value = ledger();
+        let proof = value.prove(1).unwrap();
+        assert!(!value.verify_proof(&proof, "wrong-hash"));
+    }
+
+    #[test]
+    fn merkle_proof_rejects_out_of_range() {
+        let value = ledger();
+        assert!(value.prove(999).is_none());
+    }
+
+    #[test]
+    fn checkpoint_covers_correct_range() {
+        let value = ledger();
+        let cp = value.checkpoint("ledger-1");
+        assert_eq!(cp.sequence_start, 1);
+        assert_eq!(cp.sequence_end, 2);
+        assert_eq!(cp.head_hash, value.head());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Merkle tree helpers
+// ---------------------------------------------------------------------------
+
+impl Ledger {
+    /// Compute the Merkle root of all event hashes.
+    pub fn merkle_root(&self) -> String {
+        if self.events.is_empty() {
+            return GENESIS_HASH.into();
+        }
+        let mut hashes: Vec<String> = self.events.iter().map(|e| e.event_hash.clone()).collect();
+        while hashes.len() > 1 {
+            if hashes.len() % 2 != 0 {
+                hashes.push(hashes.last().cloned().unwrap_or_default());
+            }
+            let mut next = Vec::new();
+            for pair in hashes.chunks(2) {
+                let mut hasher = Sha256::new();
+                hasher.update(pair[0].as_bytes());
+                hasher.update(pair.get(1).unwrap_or(&pair[0]).as_bytes());
+                next.push(hex::encode(hasher.finalize()));
+            }
+            hashes = next;
+        }
+        hashes.first().cloned().unwrap_or_else(|| GENESIS_HASH.into())
+    }
+
+    /// Produce a Merkle proof for the event at the given sequence number.
+    pub fn prove(&self, sequence: u64) -> Option<MerkleProof> {
+        if sequence < 1 || sequence as usize > self.events.len() {
+            return None;
+        }
+        let leaf_index = (sequence - 1) as usize;
+        let mut hashes: Vec<String> = self.events.iter().map(|e| e.event_hash.clone()).collect();
+        let mut siblings = Vec::new();
+        let mut idx = leaf_index;
+        while hashes.len() > 1 {
+            if hashes.len() % 2 != 0 {
+                hashes.push(hashes.last().cloned().unwrap_or_default());
+            }
+            let sibling_idx = if idx % 2 == 0 { idx + 1 } else { idx - 1 };
+            if sibling_idx < hashes.len() {
+                siblings.push(hashes[sibling_idx].clone());
+            }
+            idx /= 2;
+            let mut next = Vec::new();
+            for pair in hashes.chunks(2) {
+                let mut hasher = Sha256::new();
+                hasher.update(pair[0].as_bytes());
+                hasher.update(pair.get(1).unwrap_or(&pair[0]).as_bytes());
+                next.push(hex::encode(hasher.finalize()));
+            }
+            hashes = next;
+        }
+        Some(MerkleProof {
+            root_hash: hashes.first().cloned().unwrap_or_else(|| GENESIS_HASH.into()),
+            leaf_index: sequence,
+            siblings,
+        })
+    }
+
+    /// Verify a Merkle proof against a claimed event hash.
+    pub fn verify_proof(&self, proof: &MerkleProof, event_hash: &str) -> bool {
+        let mut current = event_hash.to_string();
+        let mut idx = (proof.leaf_index - 1) as usize;
+        for sibling_hex in &proof.siblings {
+            let mut hasher = Sha256::new();
+            if idx % 2 == 0 {
+                hasher.update(current.as_bytes());
+                hasher.update(sibling_hex.as_bytes());
+            } else {
+                hasher.update(sibling_hex.as_bytes());
+                hasher.update(current.as_bytes());
+            }
+            current = hex::encode(hasher.finalize());
+            idx /= 2;
+        }
+        current == proof.root_hash
+    }
+
+    /// Create an unsigned checkpoint of the current ledger state.
+    ///
+    /// Signing is deferred to the caller using the existing [`crate::receipt::ReceiptSigner`].
+    pub fn checkpoint(&self, ledger_id: &str) -> Checkpoint {
+        Checkpoint {
+            ledger_id: ledger_id.into(),
+            sequence_start: if self.events.is_empty() { 0 } else { 1 },
+            sequence_end: self.events.len() as u64,
+            head_hash: self.head().into(),
+            merkle_root: self.merkle_root(),
+            signature: None,
+            created_at_unix_ms: 0,
+        }
+    }
+}
+
+/// A Merkle proof for a single event in the ledger.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MerkleProof {
+    pub root_hash: String,
+    pub leaf_index: u64,
+    pub siblings: Vec<String>,
+}
+
+/// A signed checkpoint of the ledger state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Checkpoint {
+    pub ledger_id: String,
+    pub sequence_start: u64,
+    pub sequence_end: u64,
+    pub head_hash: String,
+    pub merkle_root: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature: Option<EventSignature>,
+    pub created_at_unix_ms: u64,
+}
+
+/// A cryptographic signature on a ledger event or checkpoint.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EventSignature {
+    pub key_id: String,
+    pub algorithm: String,
+    pub value: String,
 }

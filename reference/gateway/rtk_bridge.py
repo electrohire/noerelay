@@ -1,6 +1,6 @@
 """RTK Bridge — Python↔Rust bridging with automatic fallback.
 
-Tries to import the native Rust extension (``noerelay_rtk``). If available, uses
+Tries to import the native Rust extension (``noerelay_compact``). If available, uses
 native functions for maximum performance. If not installed (e.g., during development
 without a Rust toolchain), falls back to the existing Python implementations in
 ``compression.py``.
@@ -25,7 +25,7 @@ _NATIVE_AVAILABLE = False
 _native_module: Any = None
 
 try:
-    import noerelay_rtk as _native_module  # type: ignore[import-untyped]
+    import noerelay_compact as _native_module  # type: ignore[import-untyped]
     _NATIVE_AVAILABLE = True
     logger.debug("RTK: native Rust extension loaded (version=%s)", getattr(_native_module, "__version__", "unknown"))
 except ImportError:

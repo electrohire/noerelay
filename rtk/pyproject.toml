@@ -3,7 +3,7 @@ requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "noerelay-rtk"
+name = "noerelay-compact"
 version = "0.1.0"
 description = "Rust Token Killer — native compression for the NoeRelay gateway"
 requires-python = ">=3.10"

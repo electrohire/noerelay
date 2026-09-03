@@ -1,11 +1,11 @@
-/// NoeRelay RTK (Rust Token Killer) — native compression module.
+/// NoeRelay Compact — native context compaction module (formerly RTK).
 ///
 /// PyO3 bindings exposing fast token estimation and message compression
 /// to Python.  Mirrors the algorithms in `reference/gateway/compression.py`.
 ///
 /// Usage from Python:
-///     import noerelay_rtk
-///     result = noerelay_rtk.compress_messages_rust(messages, "auto", 0.5, 512)
+///     import noerelay_compact
+///     result = noerelay_compact.compress_messages_rust(messages, "auto", 0.5, 512)
 
 mod dedup;
 mod prune;
@@ -256,7 +256,7 @@ fn hashmap_list_to_pydict(py: Python<'_>, maps: &[HashMap<String, String>]) -> P
 // ---------------------------------------------------------------------------
 
 #[pymodule]
-fn noerelay_rtk(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn noerelay_compact(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(estimate_tokens_rust, m)?)?;
     m.add_function(wrap_pyfunction!(count_message_tokens_rust, m)?)?;
     m.add_function(wrap_pyfunction!(dedup_compress_rust, m)?)?;

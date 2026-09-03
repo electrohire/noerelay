@@ -178,11 +178,26 @@ impl GovernanceRuntime {
         constraints: &Constraints,
         occurred_at_unix_ms: u64,
     ) -> Result<PreparedRun, RuntimeError> {
+        let route = Router.select(candidates, constraints);
+        self.prepare_with_decision(request, route, occurred_at_unix_ms)
+    }
+
+    /// Prepare a run using a pre-computed route decision.
+    ///
+    /// This allows the gateway to use [`crate::routing::StagedRouter`] with
+    /// optional advisory ranking before passing the final decision to the
+    /// governance runtime. The runtime validates the decision (cost, admissibility)
+    /// but does not re-run routing.
+    pub fn prepare_with_decision(
+        &mut self,
+        request: &CanonicalRequest,
+        route: RouteDecision,
+        occurred_at_unix_ms: u64,
+    ) -> Result<PreparedRun, RuntimeError> {
         if self.active.contains_key(&request.request_id) {
             return Err(RuntimeError::DuplicateRun);
         }
         let contract = ContractCompiler.compile(request)?;
-        let route = Router.select(candidates, constraints);
         let reserved_cost_microusd = route
             .expected_total_cost_microusd
             .ok_or(RuntimeError::NoAdmissibleRoute)?;

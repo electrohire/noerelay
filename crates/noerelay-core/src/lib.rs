@@ -50,7 +50,9 @@ pub use evidence::{EnvelopeStatus, EvidenceEnvelope};
 pub use execution::*;
 pub use governance::*;
 pub use iam::*;
-pub use ledger::{Ledger, LedgerError, LedgerEvent, LedgerEventKind};
+pub use ledger::{
+    Checkpoint, EventSignature, Ledger, LedgerError, LedgerEvent, LedgerEventKind, MerkleProof,
+};
 pub use ranking::{
     AdmissibleCandidate, AdviceValidationError, AdvisoryRanker, CandidateRanking,
     RankingAdvice, RankingContext, RankingMode, RankerError, RankerIdentity,
