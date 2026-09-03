@@ -529,6 +529,13 @@ mod tests {
             status: crate::CheckStatus::Passed,
             observed_evidence_id: Some(format!("evidence-{id}")),
             verifier_family: family.map(str::to_owned),
+            evidence_kind: Some("observed".into()),
+            uncertainty: Some("none".into()),
+            recommended_action: Some("none".into()),
+            finding_severity: Some("info".into()),
+            finding_kind: Some("other".into()),
+            description: Some(format!("Check '{id}' passed.")),
+            rationale: None,
         }
     }
 

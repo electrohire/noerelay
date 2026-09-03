@@ -8,6 +8,7 @@ pub mod budget;
 pub mod context;
 pub mod contract;
 pub mod epistemic;
+pub mod evaluator_result;
 pub mod evidence;
 pub mod execution;
 pub mod governance;
@@ -30,6 +31,12 @@ pub use budget::{BudgetAccount, BudgetError, BudgetReservation};
 pub use context::{ContextCompiler, ContextError, ContextManifest, ContextNode, NodeKind};
 pub use contract::{ContractCompiler, ContractError, TaskContract};
 pub use epistemic::{Claim, ClaimKind, EpistemicState, EvidencePolarity};
+pub use evaluator_result::{
+    EvaluatorInfo, EvaluatorMetadata, EvaluatorOutcome, EvaluatorPhase, EvaluatorResult,
+    EvidenceKind as EvaluatorEvidenceKind, EvidenceRef as EvaluatorEvidenceRef, Finding,
+    FindingKind, FindingSeverity, NextAction, RecommendedAction, Uncertainty,
+    EVALUATOR_SCHEMA_VERSION,
+};
 pub use evidence::{EnvelopeStatus, EvidenceEnvelope};
 pub use execution::*;
 pub use governance::*;

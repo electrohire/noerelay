@@ -146,6 +146,7 @@ pub struct CanonicalMessage {
     pub tool_calls: Option<Vec<CanonicalToolCall>>,
     pub tool_call_id: Option<String>,
     pub name: Option<String>,
+    pub reasoning_content: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -193,6 +194,7 @@ pub struct CanonicalFunction {
     pub name: String,
     pub description: Option<String>,
     pub parameters: Option<Value>,
+    pub strict: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -752,7 +754,7 @@ fn parse_message(value: &Value) -> Result<CanonicalMessage, Vec<ApiError>> {
             Some("messages"),
         )]
     })?;
-    let allowed: HashSet<&str> = ["role", "content", "tool_calls", "tool_call_id", "name"]
+    let allowed: HashSet<&str> = ["role", "content", "tool_calls", "tool_call_id", "name", "reasoning_content", "reasoning_details"]
         .into_iter()
         .collect();
     if let Some(field) = object
@@ -790,6 +792,7 @@ fn parse_message(value: &Value) -> Result<CanonicalMessage, Vec<ApiError>> {
         tool_calls,
         tool_call_id: optional_string(object, "tool_call_id")?,
         name: optional_string(object, "name")?,
+        reasoning_content: optional_string(object, "reasoning_content")?,
     })
 }
 
@@ -835,6 +838,7 @@ fn parse_tools(value: Option<&Value>) -> Result<Option<Vec<CanonicalTool>>, Vec<
                         .to_owned(),
                     description: optional_string(object, "description")?,
                     parameters: object.get("parameters").cloned(),
+                    strict: object.get("strict").and_then(Value::as_bool),
                 }
             };
             Ok(CanonicalTool {
@@ -945,6 +949,7 @@ fn message(role: CanonicalRole, content: CanonicalContent) -> CanonicalMessage {
         tool_calls: None,
         tool_call_id: None,
         name: None,
+        reasoning_content: None,
     }
 }
 
@@ -961,6 +966,7 @@ fn format_chat_message(message: &CanonicalMessage) -> Value {
         "tool_calls": tool_calls,
         "tool_call_id": message.tool_call_id,
         "name": message.name,
+        "reasoning_content": message.reasoning_content,
     })
 }
 

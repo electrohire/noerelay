@@ -124,7 +124,8 @@ async fn tools_produce_function_call() {
             json!({
                 "model":"noerelay/epr-1",
                 "messages":[{"role":"user","content":"weather"}],
-                "tools":[{"type":"function","function":{"name":"weather","description":"lookup","parameters":{"type":"object"}}}]
+                "tools":[{"type":"function","function":{"name":"weather","description":"lookup","parameters":{"type":"object"}}}],
+                "tool_choice": "required"
             }),
         ))
         .await
@@ -136,6 +137,25 @@ async fn tools_produce_function_call() {
         body["choices"][0]["message"]["tool_calls"][0]["function"]["name"],
         "weather"
     );
+}
+
+#[tokio::test]
+async fn tools_with_auto_choice_returns_text() {
+    let response = application()
+        .oneshot(request(
+            "/v1/chat/completions",
+            json!({
+                "model":"noerelay/epr-1",
+                "messages":[{"role":"user","content":"hello"}],
+                "tools":[{"type":"function","function":{"name":"weather","description":"lookup","parameters":{"type":"object"}}}]
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = json_body(response).await;
+    assert_eq!(body["choices"][0]["finish_reason"], "stop");
+    assert!(body["choices"][0]["message"]["content"].as_str().is_some());
 }
 
 #[tokio::test]

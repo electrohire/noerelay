@@ -1,0 +1,69 @@
+{
+  "gateway": "http://127.0.0.1:8080",
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-noerelay-run-id": "12e25d7a-407d-4bc1-93c5-d15eaf9d473d",
+    "x-noerelay-contract-hash": "ba485f1a85bdbbef272a7fabf4781918dadef0ffbc8e6c156983e401b3bbb82e",
+    "x-noerelay-context-manifest-hash": "96e6374e656f6d7fe02e3ef86e6dcb545b515b4591f179d6d20c9356fb71dbdf",
+    "x-noerelay-receipt-hash": "dbae87556504d4af35c7de1b24cff3e35608884391a03c32308347c028e11fc1",
+    "x-noerelay-evaluator-result": "{\"schema_version\":\"1.0\",\"evaluator\":{\"id\":\"noerelay-gateway\",\"version\":\"0.1.0\",\"name\":\"noerelay-gateway\"},\"phase\":\"after_implement\",\"outcome\":\"pass\",\"findings\":[{\"id\":\"CHK-response\",\"severity\":\"info\",\"kind\":\"other\",\"subject\":\"12e25d7a-407d-4bc1-93c5-d15eaf9d473d\",\"description\":\"Check 'response_schema' passed.\",\"evidence_refs\":[{\"ref\":\"sha256:c5d020e0cd838a63db6bff37bf46f36ac408db28d7130cb3b307fbc1908ae31a\",\"kind\":\"observed\",\"description\":\"Observed evidence for check 'response_schema'\"}],\"provenance_refs\":[\"12e25d7a-407d-4bc1-93c5-d15eaf9d473d\"],\"uncertainty\":\"none\",\"recommended_action\":\"none\"}],\"summary\":\"noerelay-gateway found 1 issue(s) (1 info). Outcome: Pass.\",\"next_action\":{\"kind\":\"pass\",\"message\":\"All checks passed. Proceed to next phase.\"},\"metadata\":{\"deterministic\":true}}",
+    "content-length": "1111",
+    "connection": "close",
+    "date": "Wed, 02 Sep 2026 22:03:53 GMT"
+  },
+  "body": {
+    "id": "gen-1788386629-UgzcTsymXRmUniY39DE8",
+    "object": "chat.completion",
+    "created": 1788386629,
+    "model": "deepseek/deepseek-v4-pro",
+    "provider": "Alibaba",
+    "system_fingerprint": null,
+    "service_tier": null,
+    "choices": [
+      {
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop",
+        "native_finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "4",
+          "refusal": null,
+          "reasoning": "We are asked: \"What is 2+2? Answer with just the number.\" So the answer should be \"4\".",
+          "reasoning_details": [
+            {
+              "type": "reasoning.text",
+              "text": "We are asked: \"What is 2+2? Answer with just the number.\" So the answer should be \"4\".",
+              "format": "unknown",
+              "index": 0
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 17,
+      "completion_tokens": 29,
+      "total_tokens": 46,
+      "cost": 0.0001062,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0001062,
+        "upstream_inference_prompt_cost": 2.4072e-05,
+        "upstream_inference_completions_cost": 8.2128e-05
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 26,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  }
+}

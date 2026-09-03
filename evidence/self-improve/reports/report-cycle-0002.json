@@ -1,0 +1,145 @@
+{
+  "timestamp": "2026-09-03T12:40:37.416121+00:00",
+  "cycle_number": 2,
+  "composite_score": 0.9563,
+  "previous_score": 0.8943,
+  "score_delta": 0.062,
+  "convergence_progress": 0.44,
+  "bottlenecks": [
+    {
+      "cohort": "reasoning-tasks",
+      "metric": "latency",
+      "current_value": 16225.0644,
+      "baseline_value": 10984.8768,
+      "threshold": 15000,
+      "severity": "warning",
+      "recommendation": "P95 latency 16225ms exceeds 15000ms. Consider faster model or reduced context for reasoning-tasks."
+    },
+    {
+      "cohort": "safety-tasks",
+      "metric": "latency",
+      "current_value": 16055.2958,
+      "baseline_value": 12159.104,
+      "threshold": 15000,
+      "severity": "warning",
+      "recommendation": "P95 latency 16055ms exceeds 15000ms. Consider faster model or reduced context for safety-tasks."
+    },
+    {
+      "cohort": "reason-9",
+      "metric": "accuracy",
+      "current_value": 0.0,
+      "baseline_value": 0.0,
+      "threshold": 0.0,
+      "severity": "warning",
+      "recommendation": "Response does not contain expected content. (action: revise)"
+    },
+    {
+      "cohort": "evaluator-contract",
+      "metric": "outcome",
+      "current_value": 0.0,
+      "baseline_value": 0.0,
+      "threshold": 0.0,
+      "severity": "warning",
+      "recommendation": "Evaluator contract outcome is 'iterate'. Address findings before proceeding."
+    }
+  ],
+  "actions": [
+    {
+      "action_id": "action-0006",
+      "category": "config_tune",
+      "description": "Reduce context budget for reasoning-tasks to lower latency",
+      "target": "NOERELAY_CONTEXT_BUDGET_TOKENS",
+      "current_state": "32768",
+      "proposed_state": "16384",
+      "expected_impact": {
+        "latency_ms": -2000
+      },
+      "confidence": 0.6,
+      "reversible": true,
+      "requires_approval": false
+    },
+    {
+      "action_id": "action-0007",
+      "category": "model_swap",
+      "description": "Use faster model (qwen38-4b-distilled) for reasoning-tasks when quality requirements are low",
+      "target": "cohort:reasoning-tasks:primary_model",
+      "current_state": "latency=16225ms",
+      "proposed_state": "qwen38-4b-distilled:latest",
+      "expected_impact": {
+        "latency_ms": -3000,
+        "accuracy": -0.05
+      },
+      "confidence": 0.65,
+      "reversible": true,
+      "requires_approval": false
+    },
+    {
+      "action_id": "action-0008",
+      "category": "model_swap",
+      "description": "Use faster model (qwen38-4b-distilled) for safety-tasks when quality requirements are low",
+      "target": "cohort:safety-tasks:primary_model",
+      "current_state": "latency=16055ms",
+      "proposed_state": "qwen38-4b-distilled:latest",
+      "expected_impact": {
+        "latency_ms": -3000,
+        "accuracy": -0.05
+      },
+      "confidence": 0.65,
+      "reversible": true,
+      "requires_approval": false
+    },
+    {
+      "action_id": "action-0009",
+      "category": "config_tune",
+      "description": "Enable cloud fallback for reason-9 — no local model meets accuracy threshold",
+      "target": "NOERELAY_CLOUD_FALLBACK_ALLOWED",
+      "current_state": "0",
+      "proposed_state": "1",
+      "expected_impact": {
+        "accuracy": 0.1
+      },
+      "confidence": 0.5,
+      "reversible": true,
+      "requires_approval": true
+    },
+    {
+      "action_id": "action-0010",
+      "category": "restart_service",
+      "description": "Restart PostgreSQL on localhost",
+      "target": "PostgreSQL",
+      "current_state": "unhealthy",
+      "proposed_state": "healthy",
+      "expected_impact": {
+        "service_health": 1.0
+      },
+      "confidence": 0.9,
+      "reversible": true,
+      "requires_approval": false
+    },
+    {
+      "action_id": "action-0011",
+      "category": "restart_service",
+      "description": "Restart Layer1Labs Tailscale on layer1labs",
+      "target": "Layer1Labs Tailscale",
+      "current_state": "unhealthy",
+      "proposed_state": "healthy",
+      "expected_impact": {
+        "service_health": 1.0
+      },
+      "confidence": 0.9,
+      "reversible": true,
+      "requires_approval": false
+    }
+  ],
+  "applied_actions": [],
+  "pareto_frontier": [
+    {
+      "cohort": "quick-test",
+      "accuracy": 1.0,
+      "cost_usd": 0.0,
+      "latency_ms": 7722.617299994454,
+      "efficiency": 10000.0
+    }
+  ],
+  "summary": "Cycle 2: score=0.9563 (delta=+0.0620), convergence=44%\nBottlenecks: 0 critical, 4 warnings\nRecommended actions: 6\n  - Reduce context budget for reasoning-tasks to lower latency\n  - Use faster model (qwen38-4b-distilled) for reasoning-tasks when quality requirements are low\n  - Use faster model (qwen38-4b-distilled) for safety-tasks when quality requirements are low\n  - Enable cloud fallback for reason-9 — no local model meets accuracy threshold\n  - Restart PostgreSQL on localhost"
+}

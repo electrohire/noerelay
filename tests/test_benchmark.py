@@ -87,31 +87,45 @@ class DatasetLoaderTests(unittest.TestCase):
 
 
 class EvaluatorTests(unittest.TestCase):
+    def _assert_passes(self, finding):
+        """Assert a Finding represents a passing evaluation."""
+        self.assertEqual(
+            finding.recommended_action, "none",
+            "Expected pass but got action=%s: %s" % (finding.recommended_action, finding.description),
+        )
+
+    def _assert_fails(self, finding):
+        """Assert a Finding represents a failing evaluation."""
+        self.assertNotEqual(
+            finding.recommended_action, "none",
+            "Expected failure but got action=none: %s" % finding.description,
+        )
+
     def test_exact_match(self):
         evaluator = ExactMatchEvaluator()
-        self.assertTrue(evaluator.evaluate("  Paris  ", "paris", {}))
-        self.assertFalse(evaluator.evaluate("Paris", "London", {}))
+        self._assert_passes(evaluator.evaluate("  Paris  ", "paris", {}))
+        self._assert_fails(evaluator.evaluate("Paris", "London", {}))
 
     def test_contains(self):
         evaluator = ContainsEvaluator()
-        self.assertTrue(evaluator.evaluate("The capital is Paris", "paris", {}))
-        self.assertFalse(evaluator.evaluate("The capital is Paris", "London", {}))
+        self._assert_passes(evaluator.evaluate("The capital is Paris", "paris", {}))
+        self._assert_fails(evaluator.evaluate("The capital is Paris", "London", {}))
 
     def test_regex(self):
         evaluator = RegexEvaluator()
-        self.assertTrue(evaluator.evaluate("The answer is 42", r"\b42\b", {}))
-        self.assertFalse(evaluator.evaluate("The answer is 43", r"\b42\b", {}))
+        self._assert_passes(evaluator.evaluate("The answer is 42", r"\b42\b", {}))
+        self._assert_fails(evaluator.evaluate("The answer is 43", r"\b42\b", {}))
 
     def test_acceptance(self):
         evaluator = AcceptanceCriteriaEvaluator()
-        self.assertTrue(evaluator.evaluate("  some output  ", "", {}))
-        self.assertFalse(evaluator.evaluate("", "", {}))
-        self.assertFalse(evaluator.evaluate("   ", "", {}))
+        self._assert_passes(evaluator.evaluate("  some output  ", "", {}))
+        self._assert_fails(evaluator.evaluate("", "", {}))
+        self._assert_fails(evaluator.evaluate("   ", "", {}))
 
     def test_composite_all_must_pass(self):
         evaluator = CompositeEvaluator([ContainsEvaluator(), ContainsEvaluator()])
-        self.assertTrue(evaluator.evaluate("Paris and France", "Paris", {}))
-        self.assertFalse(evaluator.evaluate("Paris and France", "London", {}))
+        self._assert_passes(evaluator.evaluate("Paris and France", "Paris", {}))
+        self._assert_fails(evaluator.evaluate("Paris and France", "London", {}))
 
     def test_get_evaluator(self):
         self.assertIsInstance(get_evaluator("exact_match"), ExactMatchEvaluator)
@@ -222,11 +236,18 @@ class BenchmarkRunnerTests(unittest.TestCase):
             },
         ]
         runner = BenchmarkRunner(self.base)
-        results = runner.run_cohort("stub", InlineDatasetLoader(cases), "contains")
+        case_results, findings = runner.run_cohort("stub", InlineDatasetLoader(cases), "contains")
+        from benchmark.metrics import compute_results
+        results = compute_results("stub", case_results)
         self.assertEqual(results.total_cases, 3)
         self.assertEqual(results.correct_count, 2)
         self.assertAlmostEqual(results.accuracy, 2 / 3, places=4)
         self.assertEqual(results.total_tokens, 0)
+        # Verify findings are produced
+        self.assertEqual(len(findings), 3)
+        for f in findings:
+            self.assertIsNotNone(f.id)
+            self.assertIn(f.severity, ("critical", "high", "medium", "low", "info"))
 
     def test_run_and_report_returns_dict(self):
         cases = [
@@ -266,7 +287,7 @@ class BenchmarkRunnerTests(unittest.TestCase):
             "expected_output": "Paris",
             "evaluator": "exact_match",
         }
-        result = runner._run_single_case(case, "exact_match")
+        result, finding = runner._run_single_case(case, "exact_match")
         self.assertTrue(result.is_correct)
         self.assertEqual(result.total_tokens, 7)
         self.assertEqual(result.prompt_tokens, 5)
@@ -274,6 +295,9 @@ class BenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(result.actual_cost_usd, 0.00123)
         self.assertEqual(result.model, "noerelay/epr-1")
         self.assertEqual(result.response, "Paris")
+        # Verify finding is produced
+        self.assertIsNotNone(finding.id)
+        self.assertEqual(finding.recommended_action, "none")
 
 
 if __name__ == "__main__":

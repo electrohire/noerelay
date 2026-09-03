@@ -1,0 +1,163 @@
+{
+  "started_at": "2026-09-02T16:03:30.432246+00:00",
+  "current_cycle": 5,
+  "converged": false,
+  "converged_at": null,
+  "score_history": [
+    0.0,
+    0.8344,
+    0.899,
+    0.8448,
+    0.8552
+  ],
+  "applied_actions": [
+    {
+      "cycle": 2,
+      "action": "Enable mandatory safety verification for reasoning-tasks",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 2,
+      "action": "Enable cloud fallback for safety-tasks — no local model meets accuracy threshold",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 2,
+      "action": "Reduce context budget for safety-tasks to lower latency",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 2,
+      "action": "Enable mandatory safety verification for safety-tasks",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 2,
+      "action": "Restart LiteLLM Proxy on localhost",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 2,
+      "action": "Restart PostgreSQL on localhost",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 2,
+      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 2,
+      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "timestamp": "2026-09-02T21:44:01.331109+00:00"
+    },
+    {
+      "cycle": 3,
+      "action": "Enable cloud fallback for safety-tasks — no local model meets accuracy threshold",
+      "timestamp": "2026-09-02T21:48:20.208915+00:00"
+    },
+    {
+      "cycle": 3,
+      "action": "Enable mandatory safety verification for safety-tasks",
+      "timestamp": "2026-09-02T21:48:20.208915+00:00"
+    },
+    {
+      "cycle": 3,
+      "action": "Restart LiteLLM Proxy on localhost",
+      "timestamp": "2026-09-02T21:48:20.208915+00:00"
+    },
+    {
+      "cycle": 3,
+      "action": "Restart PostgreSQL on localhost",
+      "timestamp": "2026-09-02T21:48:20.208915+00:00"
+    },
+    {
+      "cycle": 3,
+      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "timestamp": "2026-09-02T21:48:20.208915+00:00"
+    },
+    {
+      "cycle": 3,
+      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "timestamp": "2026-09-02T21:48:20.208915+00:00"
+    },
+    {
+      "cycle": 4,
+      "action": "Enable cloud fallback for safety-tasks — no local model meets accuracy threshold",
+      "timestamp": "2026-09-02T21:52:50.796830+00:00"
+    },
+    {
+      "cycle": 4,
+      "action": "Reduce context budget for safety-tasks to lower latency",
+      "timestamp": "2026-09-02T21:52:50.796830+00:00"
+    },
+    {
+      "cycle": 4,
+      "action": "Enable mandatory safety verification for safety-tasks",
+      "timestamp": "2026-09-02T21:52:50.796830+00:00"
+    },
+    {
+      "cycle": 4,
+      "action": "Restart LiteLLM Proxy on localhost",
+      "timestamp": "2026-09-02T21:52:50.796830+00:00"
+    },
+    {
+      "cycle": 4,
+      "action": "Restart PostgreSQL on localhost",
+      "timestamp": "2026-09-02T21:52:50.796830+00:00"
+    },
+    {
+      "cycle": 4,
+      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "timestamp": "2026-09-02T21:52:50.796830+00:00"
+    },
+    {
+      "cycle": 4,
+      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "timestamp": "2026-09-02T21:52:50.796830+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Reduce context budget for coding-tasks to lower latency",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Enable mandatory safety verification for reasoning-tasks",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Enable cloud fallback for safety-tasks — no local model meets accuracy threshold",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Enable mandatory safety verification for safety-tasks",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Restart LiteLLM Proxy on localhost",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Restart PostgreSQL on localhost",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    },
+    {
+      "cycle": 5,
+      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "timestamp": "2026-09-02T21:57:27.664720+00:00"
+    }
+  ],
+  "last_results_file": "evidence\\self-improve\\results\\results-cycle-0005.json",
+  "last_health_file": "evidence\\self-improve\\health\\health-cycle-0005.json",
+  "last_report_file": "evidence\\self-improve\\reports\\report-cycle-0005.json"
+}

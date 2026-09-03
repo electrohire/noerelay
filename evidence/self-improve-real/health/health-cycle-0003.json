@@ -1,0 +1,133 @@
+{
+  "timestamp": "2026-09-02T16:21:10.798267+00:00",
+  "all_healthy": false,
+  "healthy_count": 4,
+  "total_count": 8,
+  "machines_online": [
+    "docker",
+    "layer1labs",
+    "localhost"
+  ],
+  "machines_offline": [],
+  "services": [
+    {
+      "name": "NoeRelay Gateway",
+      "host": "127.0.0.1",
+      "port": 8080,
+      "kind": "gateway",
+      "machine": "localhost",
+      "reachable": true,
+      "latency_ms": 2.29,
+      "status_code": 200,
+      "healthy": true,
+      "detail": "{\"status\":\"live\"}",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "LiteLLM Proxy",
+      "host": "127.0.0.1",
+      "port": 4000,
+      "kind": "proxy",
+      "machine": "localhost",
+      "reachable": false,
+      "latency_ms": 2043.17,
+      "status_code": 0,
+      "healthy": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Ollama",
+      "host": "127.0.0.1",
+      "port": 11434,
+      "kind": "inference",
+      "machine": "localhost",
+      "reachable": true,
+      "latency_ms": 28.95,
+      "status_code": 200,
+      "healthy": true,
+      "detail": "Ollama is running",
+      "models": [
+        "hf.co/bartowski/Muse-Glimmer-30B-GGUF:Q4_K_M",
+        "llama3.2:3b",
+        "qwen3:8b",
+        "qwen3-vl:8b-thinking",
+        "qwen38-4b-distilled:latest",
+        "qwen3-coder:30b"
+      ],
+      "error": ""
+    },
+    {
+      "name": "PostgreSQL",
+      "host": "127.0.0.1",
+      "port": 5432,
+      "kind": "database",
+      "machine": "localhost",
+      "reachable": false,
+      "latency_ms": 2037.14,
+      "status_code": 0,
+      "healthy": false,
+      "detail": "TCP port closed",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Layer1Labs vLLM (SSH tunnel)",
+      "host": "127.0.0.1",
+      "port": 4000,
+      "kind": "inference",
+      "machine": "layer1labs",
+      "reachable": false,
+      "latency_ms": 2044.22,
+      "status_code": 0,
+      "healthy": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Layer1Labs Tailscale",
+      "host": "layer1labs.tail8508ce.ts.net",
+      "port": 4000,
+      "kind": "inference",
+      "machine": "layer1labs",
+      "reachable": true,
+      "latency_ms": 11.95,
+      "status_code": 400,
+      "healthy": false,
+      "detail": "HTTP Error 400: Bad Request",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Docker: noerelay-gateway",
+      "host": "127.0.0.1",
+      "port": 8080,
+      "kind": "docker",
+      "machine": "docker",
+      "reachable": true,
+      "latency_ms": 0.0,
+      "status_code": 0,
+      "healthy": true,
+      "detail": "running",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Docker: postgres",
+      "host": "127.0.0.1",
+      "port": 5432,
+      "kind": "docker",
+      "machine": "docker",
+      "reachable": true,
+      "latency_ms": 0.0,
+      "status_code": 0,
+      "healthy": true,
+      "detail": "running",
+      "models": [],
+      "error": ""
+    }
+  ]
+}

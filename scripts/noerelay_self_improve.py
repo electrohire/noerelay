@@ -297,30 +297,30 @@ class SelfImprovementOrchestrator:
         actions_applied: list[str] = []
 
         # Step 1: Ensure services are running
-        print("─" * 50)
+        print("-" * 50)
         print("  Step 1: Ensuring all services on all machines...")
-        print("─" * 50)
+        print("-" * 50)
         self._ensure_services()
 
         # Step 2: Health probe
-        print("\n─" * 50)
+        print("\n" + "-" * 50)
         print("  Step 2: Probing service health...")
-        print("─" * 50)
+        print("-" * 50)
         health = self._probe_health(cycle)
 
         # Step 3: Run benchmarks
-        print("\n─" * 50)
+        print("\n" + "-" * 50)
         print("  Step 3: Running benchmarks...")
-        print("─" * 50)
+        print("-" * 50)
         results = self._run_benchmarks(cycle)
 
         # Step 4: Load previous results for delta
         previous = self._load_previous_results()
 
         # Step 5: Analyze
-        print("\n─" * 50)
+        print("\n" + "-" * 50)
         print("  Step 4: Analyzing results...")
-        print("─" * 50)
+        print("-" * 50)
         report = self.analyzer.analyze(
             benchmark_results=results,
             previous_results=previous,
@@ -337,9 +337,9 @@ class SelfImprovementOrchestrator:
         )
 
         # Step 6: Apply safe actions
-        print("\n─" * 50)
+        print("\n" + "-" * 50)
         print("  Step 5: Applying improvements...")
-        print("─" * 50)
+        print("-" * 50)
         applied = self._apply_actions(report)
         actions_applied = [a.description for a in applied]
 
@@ -528,6 +528,14 @@ class SelfImprovementOrchestrator:
                 continue
 
             if can_auto or action.category == "restart_service":
+                # Skip if this action was already applied in any previous cycle
+                already_applied = any(
+                    a.get("action") == action.description
+                    for a in self.state._data.get("applied_actions", [])
+                )
+                if already_applied:
+                    print(f"  [SKIP] Already applied in prior cycle: {action.description}")
+                    continue
                 print(f"  [APPLY] {action.description}")
                 success = self._execute_action(action)
                 if success:
@@ -575,7 +583,7 @@ class SelfImprovementOrchestrator:
         """Tune a configuration parameter."""
         # For now, config tuning is advisory — actual changes require
         # updating .env or environment variables and restarting.
-        print(f"  Config tune: {key} → {value} (requires restart to take effect)")
+        print(f"  Config tune: {key} -> {value} (requires restart to take effect)")
         return True
 
     # ------------------------------------------------------------------

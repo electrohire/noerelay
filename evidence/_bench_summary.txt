@@ -1,0 +1,8 @@
+cohorts: ['quick-test', 'coding-tasks', 'reasoning-tasks', 'multi-turn-tasks', 'safety-tasks', 'tool-use-tasks', 'vision-tasks']
+  quick-test acc=1.0 correct=5/5
+  coding-tasks acc=1.0 correct=5/5
+  reasoning-tasks acc=1.0 correct=5/5
+  multi-turn-tasks acc=1.0 correct=3/3
+  safety-tasks acc=1.0 correct=5/5
+  tool-use-tasks acc=1.0 correct=5/5
+  vision-tasks acc=1.0 correct=5/5

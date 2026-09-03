@@ -1,5 +1,15 @@
 {"id": "math-1", "input": {"messages": [{"role": "user", "content": "What is 2+2? Answer with just the number."}]}, "expected_output": "4", "evaluator": "contains"}
 {"id": "math-2", "input": {"messages": [{"role": "user", "content": "What is 15*3? Answer with just the number."}]}, "expected_output": "45", "evaluator": "contains"}
-{"id": "geography-1", "input": {"messages": [{"role": "user", "content": "What is the capital of France? Answer with just the city name."}]}, "expected_output": "Paris", "evaluator": "contains"}
-{"id": "geography-2", "input": {"messages": [{"role": "user", "content": "What is the capital of Japan? Answer with just the city name."}]}, "expected_output": "Tokyo", "evaluator": "contains"}
-{"id": "science-1", "input": {"messages": [{"role": "user", "content": "What is the chemical symbol for gold? Answer with just the symbol."}]}, "expected_output": "Au", "evaluator": "contains"}
+{"id": "math-3", "input": {"messages": [{"role": "user", "content": "Compute the square root of 144. Answer with just the number."}]}, "expected_output": "12", "evaluator": "contains"}
+{"id": "math-4", "input": {"messages": [{"role": "user", "content": "What is 2^10 (2 raised to the power of 10)? Answer with just the number."}]}, "expected_output": "1024", "evaluator": "contains"}
+{"id": "math-5", "input": {"messages": [{"role": "user", "content": "What is the least common multiple of 12 and 18? Answer with just the number."}]}, "expected_output": "36", "evaluator": "contains"}
+{"id": "geo-1", "input": {"messages": [{"role": "user", "content": "What is the capital of France? Answer with just the city name."}]}, "expected_output": "Paris", "evaluator": "contains"}
+{"id": "geo-2", "input": {"messages": [{"role": "user", "content": "What is the capital of Japan? Answer with just the city name."}]}, "expected_output": "Tokyo", "evaluator": "contains"}
+{"id": "geo-3", "input": {"messages": [{"role": "user", "content": "What is the longest river in the world? Answer with just the river name."}]}, "expected_output": "Nile", "evaluator": "contains"}
+{"id": "geo-4", "input": {"messages": [{"role": "user", "content": "Which country has the largest population? Answer with just the country name."}]}, "expected_output": "India", "evaluator": "contains"}
+{"id": "sci-1", "input": {"messages": [{"role": "user", "content": "What is the chemical symbol for gold? Answer with just the symbol."}]}, "expected_output": "Au", "evaluator": "contains"}
+{"id": "sci-2", "input": {"messages": [{"role": "user", "content": "What planet is known as the Red Planet? Answer with just the planet name."}]}, "expected_output": "Mars", "evaluator": "contains"}
+{"id": "sci-3", "input": {"messages": [{"role": "user", "content": "What is the speed of light in vacuum (in km/s)? Answer with just the number."}]}, "expected_output": "299792", "evaluator": "contains"}
+{"id": "hist-1", "input": {"messages": [{"role": "user", "content": "In what year did World War II end? Answer with just the year."}]}, "expected_output": "1945", "evaluator": "contains"}
+{"id": "hist-2", "input": {"messages": [{"role": "user", "content": "Who was the first President of the United States? Answer with just the full name."}]}, "expected_output": "George Washington", "evaluator": "contains"}
+{"id": "lit-1", "input": {"messages": [{"role": "user", "content": "Who wrote Romeo and Juliet? Answer with just the full name."}]}, "expected_output": "William Shakespeare", "evaluator": "contains"}

@@ -39,6 +39,27 @@ pub struct CheckResult {
     pub status: CheckStatus,
     pub observed_evidence_id: Option<String>,
     pub verifier_family: Option<String>,
+    /// Evaluator-contract: nature of the evidence (observed, inferred, asserted, contradicted, unsupported).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence_kind: Option<String>,
+    /// Evaluator-contract: level of uncertainty (none, low, medium, high, insufficient_evidence).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uncertainty: Option<String>,
+    /// Evaluator-contract: recommended action (none, gather_evidence, clarify, revise, iterate, escalate, accept_risk, block).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recommended_action: Option<String>,
+    /// Evaluator-contract: finding severity (critical, high, medium, low, info).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finding_severity: Option<String>,
+    /// Evaluator-contract: classification of the finding.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finding_kind: Option<String>,
+    /// Evaluator-contract: human-readable description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Evaluator-contract: brief rationale.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rationale: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -245,6 +266,13 @@ mod tests {
             status: CheckStatus::Passed,
             observed_evidence_id: Some(format!("evidence-{id}")),
             verifier_family: family.map(str::to_owned),
+            evidence_kind: Some("observed".into()),
+            uncertainty: Some("none".into()),
+            recommended_action: Some("none".into()),
+            finding_severity: Some("info".into()),
+            finding_kind: Some("other".into()),
+            description: Some(format!("Check '{id}' passed.")),
+            rationale: None,
         }
     }
 
@@ -298,6 +326,13 @@ mod tests {
                     status: CheckStatus::Claimed,
                     observed_evidence_id: None,
                     verifier_family: None,
+                    evidence_kind: Some("asserted".into()),
+                    uncertainty: Some("medium".into()),
+                    recommended_action: Some("gather_evidence".into()),
+                    finding_severity: Some("medium".into()),
+                    finding_kind: Some("unverified_assertion".into()),
+                    description: Some("Claimed but not observed.".into()),
+                    rationale: None,
                 }],
             )
             .unwrap();

@@ -56,6 +56,7 @@ impl StubProvider {
                     tool_calls,
                     tool_call_id: None,
                     name: None,
+                    reasoning_content: None,
                 }),
                 delta: None,
                 finish_reason: Some(finish_reason),
@@ -74,11 +75,12 @@ impl StubProvider {
 fn selected_tool(request: &CanonicalRequest) -> Option<&noerelay_core::wire::CanonicalTool> {
     let tools = request.tools.as_deref()?;
     match request.tool_choice.as_ref() {
-        Some(CanonicalToolChoice::None) => None,
+        Some(CanonicalToolChoice::None) | None => None,
+        Some(CanonicalToolChoice::Auto) => None,
         Some(CanonicalToolChoice::Specific { function }) => tools
             .iter()
             .find(|tool| tool.function.name == function.name),
-        Some(CanonicalToolChoice::Auto | CanonicalToolChoice::Required) | None => tools.first(),
+        Some(CanonicalToolChoice::Required) => tools.first(),
     }
 }
 

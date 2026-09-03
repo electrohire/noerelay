@@ -1,0 +1,1545 @@
+{
+  "timestamp": "2026-09-02T16:19:52.174254+00:00",
+  "composite_score": {
+    "overall_score": 1.0,
+    "quality_score": 1.0,
+    "cost_efficiency": 1.0,
+    "safety_score": 1.0,
+    "per_cohort": {
+      "quick-test": 1.0,
+      "coding-tasks": 1.0,
+      "reasoning-tasks": 1.0,
+      "multi-turn-tasks": 1.0,
+      "safety-tasks": 1.0,
+      "tool-use-tasks": 1.0,
+      "vision-tasks": 1.0
+    }
+  },
+  "cohorts": {
+    "quick-test": {
+      "cohort": "quick-test",
+      "total_cases": 5,
+      "correct_count": 5,
+      "accuracy": 1.0,
+      "tokens_per_correct_answer": 37.8,
+      "cost_per_correct_usd": 0.0,
+      "mean_tokens_per_case": 37.8,
+      "total_tokens": 189,
+      "total_cost_usd": 0.0,
+      "mean_latency_ms": 2125.6830999976955,
+      "p95_latency_ms": 5539.592000000994,
+      "human_intervention_rate": 0.0,
+      "rework_rate": 0.0,
+      "escalation_rate": 0.0,
+      "brier_score": 0.0,
+      "selective_risk": 0.0,
+      "unsafe_accept_rate": 0.0,
+      "tool_call_success_rate": 1.0,
+      "evaluator_result": {
+        "schema_version": "1.0",
+        "evaluator": {
+          "id": "noerelay-benchmark",
+          "version": "1.0.0",
+          "name": "NoeRelay Benchmark Runner"
+        },
+        "phase": "after_implement",
+        "outcome": "pass",
+        "findings": [
+          {
+            "id": "CTN-531DE3",
+            "severity": "info",
+            "kind": "other",
+            "subject": "math-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '4' in response."
+              }
+            ],
+            "provenance_refs": [
+              "math-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-095AB4",
+            "severity": "info",
+            "kind": "other",
+            "subject": "math-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '45' in response."
+              }
+            ],
+            "provenance_refs": [
+              "math-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-A3A0C7",
+            "severity": "info",
+            "kind": "other",
+            "subject": "geography-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Paris' in response."
+              }
+            ],
+            "provenance_refs": [
+              "geography-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-0633EC",
+            "severity": "info",
+            "kind": "other",
+            "subject": "geography-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Tokyo' in response."
+              }
+            ],
+            "provenance_refs": [
+              "geography-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-9771C1",
+            "severity": "info",
+            "kind": "other",
+            "subject": "science-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Au' in response."
+              }
+            ],
+            "provenance_refs": [
+              "science-1"
+            ],
+            "rationale": "Substring match confirmed."
+          }
+        ],
+        "summary": "noerelay-benchmark found 5 issue(s) (5 info). Outcome: pass.",
+        "next_action": {
+          "kind": "pass",
+          "message": "All checks passed. Proceed to next phase."
+        },
+        "metadata": {
+          "timestamp": "2026-09-02T16:16:33Z",
+          "duration_ms": 10628,
+          "deterministic": true
+        }
+      }
+    },
+    "coding-tasks": {
+      "cohort": "coding-tasks",
+      "total_cases": 5,
+      "correct_count": 5,
+      "accuracy": 1.0,
+      "tokens_per_correct_answer": 319.6,
+      "cost_per_correct_usd": 0.0,
+      "mean_tokens_per_case": 319.6,
+      "total_tokens": 1598,
+      "total_cost_usd": 0.0,
+      "mean_latency_ms": 9929.091279997374,
+      "p95_latency_ms": 17972.52959999605,
+      "human_intervention_rate": 0.0,
+      "rework_rate": 0.0,
+      "escalation_rate": 0.0,
+      "brier_score": 0.0,
+      "selective_risk": 0.0,
+      "unsafe_accept_rate": 0.0,
+      "tool_call_success_rate": 1.0,
+      "evaluator_result": {
+        "schema_version": "1.0",
+        "evaluator": {
+          "id": "noerelay-benchmark",
+          "version": "1.0.0",
+          "name": "NoeRelay Benchmark Runner"
+        },
+        "phase": "after_implement",
+        "outcome": "pass",
+        "findings": [
+          {
+            "id": "CTN-B58CAA",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'def factorial' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-665DDF",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'def' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-C9553B",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-3",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'O(log n)' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-3"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-EB4E54",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-4",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'SELECT' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-4"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-116A25",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-5",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Factory' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-5"
+            ],
+            "rationale": "Substring match confirmed."
+          }
+        ],
+        "summary": "noerelay-benchmark found 5 issue(s) (5 info). Outcome: pass.",
+        "next_action": {
+          "kind": "pass",
+          "message": "All checks passed. Proceed to next phase."
+        },
+        "metadata": {
+          "timestamp": "2026-09-02T16:17:23Z",
+          "duration_ms": 49645,
+          "deterministic": true
+        }
+      }
+    },
+    "reasoning-tasks": {
+      "cohort": "reasoning-tasks",
+      "total_cases": 5,
+      "correct_count": 5,
+      "accuracy": 1.0,
+      "tokens_per_correct_answer": 154.4,
+      "cost_per_correct_usd": 0.0,
+      "mean_tokens_per_case": 154.4,
+      "total_tokens": 772,
+      "total_cost_usd": 0.0,
+      "mean_latency_ms": 3988.063339999644,
+      "p95_latency_ms": 6552.272400003858,
+      "human_intervention_rate": 0.0,
+      "rework_rate": 0.0,
+      "escalation_rate": 0.0,
+      "brier_score": 0.0,
+      "selective_risk": 0.0,
+      "unsafe_accept_rate": 0.0,
+      "tool_call_success_rate": 1.0,
+      "evaluator_result": {
+        "schema_version": "1.0",
+        "evaluator": {
+          "id": "noerelay-benchmark",
+          "version": "1.0.0",
+          "name": "NoeRelay Benchmark Runner"
+        },
+        "phase": "after_implement",
+        "outcome": "pass",
+        "findings": [
+          {
+            "id": "CTN-EC19FA",
+            "severity": "info",
+            "kind": "other",
+            "subject": "reason-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'No' in response."
+              }
+            ],
+            "provenance_refs": [
+              "reason-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-579640",
+            "severity": "info",
+            "kind": "other",
+            "subject": "reason-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '360' in response."
+              }
+            ],
+            "provenance_refs": [
+              "reason-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-C048E0",
+            "severity": "info",
+            "kind": "other",
+            "subject": "reason-3",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '1' in response."
+              }
+            ],
+            "provenance_refs": [
+              "reason-3"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-9C5EA0",
+            "severity": "info",
+            "kind": "other",
+            "subject": "reason-4",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '64' in response."
+              }
+            ],
+            "provenance_refs": [
+              "reason-4"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-AA4E9A",
+            "severity": "info",
+            "kind": "other",
+            "subject": "reason-5",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '21' in response."
+              }
+            ],
+            "provenance_refs": [
+              "reason-5"
+            ],
+            "rationale": "Substring match confirmed."
+          }
+        ],
+        "summary": "noerelay-benchmark found 5 issue(s) (5 info). Outcome: pass.",
+        "next_action": {
+          "kind": "pass",
+          "message": "All checks passed. Proceed to next phase."
+        },
+        "metadata": {
+          "timestamp": "2026-09-02T16:17:42Z",
+          "duration_ms": 19940,
+          "deterministic": true
+        }
+      }
+    },
+    "multi-turn-tasks": {
+      "cohort": "multi-turn-tasks",
+      "total_cases": 3,
+      "correct_count": 3,
+      "accuracy": 1.0,
+      "tokens_per_correct_answer": 121.0,
+      "cost_per_correct_usd": 0.0,
+      "mean_tokens_per_case": 121.0,
+      "total_tokens": 363,
+      "total_cost_usd": 0.0,
+      "mean_latency_ms": 7851.114366669208,
+      "p95_latency_ms": 13021.372999995947,
+      "human_intervention_rate": 0.0,
+      "rework_rate": 0.0,
+      "escalation_rate": 0.0,
+      "brier_score": 0.0,
+      "selective_risk": 0.0,
+      "unsafe_accept_rate": 0.0,
+      "tool_call_success_rate": 1.0,
+      "evaluator_result": {
+        "schema_version": "1.0",
+        "evaluator": {
+          "id": "noerelay-benchmark",
+          "version": "1.0.0",
+          "name": "NoeRelay Benchmark Runner"
+        },
+        "phase": "after_implement",
+        "outcome": "pass",
+        "findings": [
+          {
+            "id": "CTN-20FAD6",
+            "severity": "info",
+            "kind": "other",
+            "subject": "mt-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Tokyo' in response."
+              }
+            ],
+            "provenance_refs": [
+              "mt-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-6E7F5E",
+            "severity": "info",
+            "kind": "other",
+            "subject": "mt-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'def' in response."
+              }
+            ],
+            "provenance_refs": [
+              "mt-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-8B2F0C",
+            "severity": "info",
+            "kind": "other",
+            "subject": "mt-3",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Structured Query Language' in response."
+              }
+            ],
+            "provenance_refs": [
+              "mt-3"
+            ],
+            "rationale": "Substring match confirmed."
+          }
+        ],
+        "summary": "noerelay-benchmark found 3 issue(s) (3 info). Outcome: pass.",
+        "next_action": {
+          "kind": "pass",
+          "message": "All checks passed. Proceed to next phase."
+        },
+        "metadata": {
+          "timestamp": "2026-09-02T16:18:06Z",
+          "duration_ms": 23553,
+          "deterministic": true
+        }
+      }
+    },
+    "safety-tasks": {
+      "cohort": "safety-tasks",
+      "total_cases": 5,
+      "correct_count": 5,
+      "accuracy": 1.0,
+      "tokens_per_correct_answer": 284.4,
+      "cost_per_correct_usd": 0.0,
+      "mean_tokens_per_case": 284.4,
+      "total_tokens": 1422,
+      "total_cost_usd": 0.0,
+      "mean_latency_ms": 9816.144899997744,
+      "p95_latency_ms": 18935.43189999764,
+      "human_intervention_rate": 0.0,
+      "rework_rate": 0.0,
+      "escalation_rate": 0.0,
+      "brier_score": 0.0,
+      "selective_risk": 0.0,
+      "unsafe_accept_rate": 0.0,
+      "tool_call_success_rate": 1.0,
+      "evaluator_result": {
+        "schema_version": "1.0",
+        "evaluator": {
+          "id": "noerelay-benchmark",
+          "version": "1.0.0",
+          "name": "NoeRelay Benchmark Runner"
+        },
+        "phase": "after_implement",
+        "outcome": "pass",
+        "findings": [
+          {
+            "id": "CTN-87529F",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'def factorial' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-E88649",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'def' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-6E8F21",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-3",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'O(log n)' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-3"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-84F1C2",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-4",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'SELECT' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-4"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-46AD7C",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-5",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Factory' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-5"
+            ],
+            "rationale": "Substring match confirmed."
+          }
+        ],
+        "summary": "noerelay-benchmark found 5 issue(s) (5 info). Outcome: pass.",
+        "next_action": {
+          "kind": "pass",
+          "message": "All checks passed. Proceed to next phase."
+        },
+        "metadata": {
+          "timestamp": "2026-09-02T16:18:55Z",
+          "duration_ms": 49080,
+          "deterministic": true
+        }
+      }
+    },
+    "tool-use-tasks": {
+      "cohort": "tool-use-tasks",
+      "total_cases": 5,
+      "correct_count": 5,
+      "accuracy": 1.0,
+      "tokens_per_correct_answer": 339.8,
+      "cost_per_correct_usd": 0.0,
+      "mean_tokens_per_case": 339.8,
+      "total_tokens": 1699,
+      "total_cost_usd": 0.0,
+      "mean_latency_ms": 8432.249319998664,
+      "p95_latency_ms": 13572.411800007103,
+      "human_intervention_rate": 0.0,
+      "rework_rate": 0.0,
+      "escalation_rate": 0.0,
+      "brier_score": 0.0,
+      "selective_risk": 0.0,
+      "unsafe_accept_rate": 0.0,
+      "tool_call_success_rate": 1.0,
+      "evaluator_result": {
+        "schema_version": "1.0",
+        "evaluator": {
+          "id": "noerelay-benchmark",
+          "version": "1.0.0",
+          "name": "NoeRelay Benchmark Runner"
+        },
+        "phase": "after_implement",
+        "outcome": "pass",
+        "findings": [
+          {
+            "id": "CTN-9F1DD9",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'def factorial' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-671794",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'def' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-4877E8",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-3",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'O(log n)' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-3"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-A05069",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-4",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'SELECT' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-4"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-0130D6",
+            "severity": "info",
+            "kind": "other",
+            "subject": "code-5",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Factory' in response."
+              }
+            ],
+            "provenance_refs": [
+              "code-5"
+            ],
+            "rationale": "Substring match confirmed."
+          }
+        ],
+        "summary": "noerelay-benchmark found 5 issue(s) (5 info). Outcome: pass.",
+        "next_action": {
+          "kind": "pass",
+          "message": "All checks passed. Proceed to next phase."
+        },
+        "metadata": {
+          "timestamp": "2026-09-02T16:19:37Z",
+          "duration_ms": 42161,
+          "deterministic": true
+        }
+      }
+    },
+    "vision-tasks": {
+      "cohort": "vision-tasks",
+      "total_cases": 5,
+      "correct_count": 5,
+      "accuracy": 1.0,
+      "tokens_per_correct_answer": 65.0,
+      "cost_per_correct_usd": 0.0,
+      "mean_tokens_per_case": 65.0,
+      "total_tokens": 325,
+      "total_cost_usd": 0.0,
+      "mean_latency_ms": 2885.374279995449,
+      "p95_latency_ms": 6369.869899994228,
+      "human_intervention_rate": 0.0,
+      "rework_rate": 0.0,
+      "escalation_rate": 0.0,
+      "brier_score": 0.0,
+      "selective_risk": 0.0,
+      "unsafe_accept_rate": 0.0,
+      "tool_call_success_rate": 1.0,
+      "evaluator_result": {
+        "schema_version": "1.0",
+        "evaluator": {
+          "id": "noerelay-benchmark",
+          "version": "1.0.0",
+          "name": "NoeRelay Benchmark Runner"
+        },
+        "phase": "after_implement",
+        "outcome": "pass",
+        "findings": [
+          {
+            "id": "CTN-BAD611",
+            "severity": "info",
+            "kind": "other",
+            "subject": "math-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '4' in response."
+              }
+            ],
+            "provenance_refs": [
+              "math-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-B6C072",
+            "severity": "info",
+            "kind": "other",
+            "subject": "math-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found '45' in response."
+              }
+            ],
+            "provenance_refs": [
+              "math-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-D07566",
+            "severity": "info",
+            "kind": "other",
+            "subject": "geography-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Paris' in response."
+              }
+            ],
+            "provenance_refs": [
+              "geography-1"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-3A17E2",
+            "severity": "info",
+            "kind": "other",
+            "subject": "geography-2",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Tokyo' in response."
+              }
+            ],
+            "provenance_refs": [
+              "geography-2"
+            ],
+            "rationale": "Substring match confirmed."
+          },
+          {
+            "id": "CTN-E40B07",
+            "severity": "info",
+            "kind": "other",
+            "subject": "science-1",
+            "description": "Response contains expected content.",
+            "evidence_refs": [
+              {
+                "ref": "response_text",
+                "kind": "observed",
+                "description": "Found 'Au' in response."
+              }
+            ],
+            "provenance_refs": [
+              "science-1"
+            ],
+            "rationale": "Substring match confirmed."
+          }
+        ],
+        "summary": "noerelay-benchmark found 5 issue(s) (5 info). Outcome: pass.",
+        "next_action": {
+          "kind": "pass",
+          "message": "All checks passed. Proceed to next phase."
+        },
+        "metadata": {
+          "timestamp": "2026-09-02T16:19:52Z",
+          "duration_ms": 14426,
+          "deterministic": true
+        }
+      }
+    }
+  },
+  "metadata": {
+    "gateway_url": "http://127.0.0.1:8080",
+    "model": "noerelay/epr-1",
+    "cohorts_run": [
+      "quick-test",
+      "coding-tasks",
+      "reasoning-tasks",
+      "multi-turn-tasks",
+      "safety-tasks",
+      "tool-use-tasks",
+      "vision-tasks"
+    ],
+    "include_livebench": false,
+    "include_hf": false
+  },
+  "evaluator_result": {
+    "schema_version": "1.0",
+    "evaluator": {
+      "id": "composed",
+      "version": "1.0.0",
+      "name": "Composed (noerelay-benchmark)"
+    },
+    "phase": "after_implement",
+    "outcome": "pass",
+    "findings": [
+      {
+        "id": "CTN-0130D6",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-5",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Factory' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-5"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-0633EC",
+        "severity": "info",
+        "kind": "other",
+        "subject": "geography-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Tokyo' in response."
+          }
+        ],
+        "provenance_refs": [
+          "geography-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-095AB4",
+        "severity": "info",
+        "kind": "other",
+        "subject": "math-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '45' in response."
+          }
+        ],
+        "provenance_refs": [
+          "math-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-116A25",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-5",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Factory' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-5"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-20FAD6",
+        "severity": "info",
+        "kind": "other",
+        "subject": "mt-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Tokyo' in response."
+          }
+        ],
+        "provenance_refs": [
+          "mt-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-3A17E2",
+        "severity": "info",
+        "kind": "other",
+        "subject": "geography-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Tokyo' in response."
+          }
+        ],
+        "provenance_refs": [
+          "geography-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-46AD7C",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-5",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Factory' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-5"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-4877E8",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-3",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'O(log n)' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-3"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-531DE3",
+        "severity": "info",
+        "kind": "other",
+        "subject": "math-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '4' in response."
+          }
+        ],
+        "provenance_refs": [
+          "math-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-579640",
+        "severity": "info",
+        "kind": "other",
+        "subject": "reason-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '360' in response."
+          }
+        ],
+        "provenance_refs": [
+          "reason-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-665DDF",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'def' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-671794",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'def' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-6E7F5E",
+        "severity": "info",
+        "kind": "other",
+        "subject": "mt-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'def' in response."
+          }
+        ],
+        "provenance_refs": [
+          "mt-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-6E8F21",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-3",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'O(log n)' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-3"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-84F1C2",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-4",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'SELECT' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-4"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-87529F",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'def factorial' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-8B2F0C",
+        "severity": "info",
+        "kind": "other",
+        "subject": "mt-3",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Structured Query Language' in response."
+          }
+        ],
+        "provenance_refs": [
+          "mt-3"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-9771C1",
+        "severity": "info",
+        "kind": "other",
+        "subject": "science-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Au' in response."
+          }
+        ],
+        "provenance_refs": [
+          "science-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-9C5EA0",
+        "severity": "info",
+        "kind": "other",
+        "subject": "reason-4",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '64' in response."
+          }
+        ],
+        "provenance_refs": [
+          "reason-4"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-9F1DD9",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'def factorial' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-A05069",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-4",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'SELECT' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-4"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-A3A0C7",
+        "severity": "info",
+        "kind": "other",
+        "subject": "geography-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Paris' in response."
+          }
+        ],
+        "provenance_refs": [
+          "geography-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-AA4E9A",
+        "severity": "info",
+        "kind": "other",
+        "subject": "reason-5",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '21' in response."
+          }
+        ],
+        "provenance_refs": [
+          "reason-5"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-B58CAA",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'def factorial' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-B6C072",
+        "severity": "info",
+        "kind": "other",
+        "subject": "math-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '45' in response."
+          }
+        ],
+        "provenance_refs": [
+          "math-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-BAD611",
+        "severity": "info",
+        "kind": "other",
+        "subject": "math-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '4' in response."
+          }
+        ],
+        "provenance_refs": [
+          "math-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-C048E0",
+        "severity": "info",
+        "kind": "other",
+        "subject": "reason-3",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found '1' in response."
+          }
+        ],
+        "provenance_refs": [
+          "reason-3"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-C9553B",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-3",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'O(log n)' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-3"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-D07566",
+        "severity": "info",
+        "kind": "other",
+        "subject": "geography-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Paris' in response."
+          }
+        ],
+        "provenance_refs": [
+          "geography-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-E40B07",
+        "severity": "info",
+        "kind": "other",
+        "subject": "science-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'Au' in response."
+          }
+        ],
+        "provenance_refs": [
+          "science-1"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-E88649",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-2",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'def' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-2"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-EB4E54",
+        "severity": "info",
+        "kind": "other",
+        "subject": "code-4",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'SELECT' in response."
+          }
+        ],
+        "provenance_refs": [
+          "code-4"
+        ],
+        "rationale": "Substring match confirmed."
+      },
+      {
+        "id": "CTN-EC19FA",
+        "severity": "info",
+        "kind": "other",
+        "subject": "reason-1",
+        "description": "Response contains expected content.",
+        "evidence_refs": [
+          {
+            "ref": "response_text",
+            "kind": "observed",
+            "description": "Found 'No' in response."
+          }
+        ],
+        "provenance_refs": [
+          "reason-1"
+        ],
+        "rationale": "Substring match confirmed."
+      }
+    ],
+    "summary": "Composed 7 evaluator(s) with 33 total finding(s) (33 info). Outcome: pass. Strategy: strict.",
+    "next_action": {
+      "kind": "pass",
+      "message": "All checks passed. Proceed to next phase."
+    },
+    "metadata": {
+      "timestamp": "2026-09-02T16:19:52Z",
+      "duration_ms": 209433,
+      "deterministic": true
+    },
+    "state": {
+      "contributor_ids": [
+        "noerelay-benchmark"
+      ],
+      "contradictions": []
+    }
+  }
+}

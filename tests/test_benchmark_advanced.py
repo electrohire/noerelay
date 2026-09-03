@@ -166,36 +166,50 @@ class HFDatasetLoaderTests(unittest.TestCase):
 
 
 class HarnessAdapterTests(unittest.TestCase):
+    def _assert_passes(self, finding):
+        """Assert a Finding represents a passing evaluation."""
+        self.assertEqual(
+            finding.recommended_action, "none",
+            "Expected pass but got action=%s: %s" % (finding.recommended_action, finding.description),
+        )
+
+    def _assert_fails(self, finding):
+        """Assert a Finding represents a failing evaluation."""
+        self.assertNotEqual(
+            finding.recommended_action, "none",
+            "Expected failure but got action=none: %s" % finding.description,
+        )
+
     def test_harness_adapter_is_abstract(self):
         with self.assertRaises(NotImplementedError):
             HarnessAdapter().evaluate({}, {"content": ""})
 
     def test_swebench_detects_patch(self):
         adapter = SWEBenchHarnessAdapter()
-        self.assertTrue(
+        self._assert_passes(
             adapter.evaluate({}, {"content": "```diff\n--- a/x\n+++ b/x\n```"})
         )
-        self.assertTrue(adapter.evaluate({}, {"content": "diff --git a/x b/x"}))
-        self.assertFalse(adapter.evaluate({}, {"content": "just a plain answer"}))
+        self._assert_passes(adapter.evaluate({}, {"content": "diff --git a/x b/x"}))
+        self._assert_fails(adapter.evaluate({}, {"content": "just a plain answer"}))
 
     def test_bfcl_json_match(self):
         adapter = BFCLHarnessAdapter()
         case = {"expected_output": '{"name": "foo", "args": {}}'}
-        self.assertTrue(
+        self._assert_passes(
             adapter.evaluate(case, {"content": '{"name": "foo", "args": {}}'})
         )
-        self.assertFalse(adapter.evaluate(case, {"content": '{"name": "bar"}'}))
+        self._assert_fails(adapter.evaluate(case, {"content": '{"name": "bar"}'}))
 
     def test_bfcl_plain_match(self):
         adapter = BFCLHarnessAdapter()
         case = {"expected_output": "lookup"}
-        self.assertTrue(adapter.evaluate(case, {"content": "  LOOKUP  "}))
-        self.assertFalse(adapter.evaluate(case, {"content": "other"}))
+        self._assert_passes(adapter.evaluate(case, {"content": "  LOOKUP  "}))
+        self._assert_fails(adapter.evaluate(case, {"content": "other"}))
 
     def test_contract_adapter(self):
         adapter = ContractComplianceAdapter()
-        self.assertTrue(adapter.evaluate({}, {"content": "some output"}))
-        self.assertFalse(adapter.evaluate({}, {"content": ""}))
+        self._assert_passes(adapter.evaluate({}, {"content": "some output"}))
+        self._assert_fails(adapter.evaluate({}, {"content": ""}))
 
     def test_get_harness(self):
         self.assertIsInstance(get_harness("swe_bench"), SWEBenchHarnessAdapter)

@@ -1,0 +1,139 @@
+{
+  "timestamp": "2026-09-03T12:45:29.700468+00:00",
+  "all_healthy": false,
+  "healthy_count": 6,
+  "total_count": 8,
+  "machines_online": [
+    "docker",
+    "layer1labs",
+    "localhost"
+  ],
+  "machines_offline": [],
+  "services": [
+    {
+      "name": "NoeRelay Gateway",
+      "host": "127.0.0.1",
+      "port": 8080,
+      "kind": "gateway",
+      "machine": "localhost",
+      "reachable": true,
+      "latency_ms": 21.78,
+      "status_code": 200,
+      "healthy": true,
+      "detail": "{\"status\":\"live\"}",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "LiteLLM Proxy",
+      "host": "127.0.0.1",
+      "port": 4000,
+      "kind": "proxy",
+      "machine": "localhost",
+      "reachable": true,
+      "latency_ms": 17.69,
+      "status_code": 200,
+      "healthy": true,
+      "detail": "{\"healthy_endpoints\":[],\"unhealthy_endpoints\":[],\"healthy_count\":0,\"unhealthy_count\":0}",
+      "models": [
+        "ollama/qwen3-coder:30b"
+      ],
+      "error": ""
+    },
+    {
+      "name": "Ollama",
+      "host": "127.0.0.1",
+      "port": 11434,
+      "kind": "inference",
+      "machine": "localhost",
+      "reachable": true,
+      "latency_ms": 2.14,
+      "status_code": 200,
+      "healthy": true,
+      "detail": "Ollama is running",
+      "models": [
+        "deepseek-r1:32b",
+        "qwen3.8:27b",
+        "hf.co/bartowski/Muse-Glimmer-30B-GGUF:Q4_K_M",
+        "llama3.2:3b",
+        "qwen3:8b",
+        "qwen3-vl:8b-thinking",
+        "qwen38-4b-distilled:latest",
+        "qwen3-coder:30b"
+      ],
+      "error": ""
+    },
+    {
+      "name": "PostgreSQL",
+      "host": "127.0.0.1",
+      "port": 5432,
+      "kind": "database",
+      "machine": "localhost",
+      "reachable": false,
+      "latency_ms": 2020.44,
+      "status_code": 0,
+      "healthy": false,
+      "detail": "TCP port closed",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Layer1Labs vLLM (SSH tunnel)",
+      "host": "127.0.0.1",
+      "port": 4000,
+      "kind": "inference",
+      "machine": "layer1labs",
+      "reachable": true,
+      "latency_ms": 4.82,
+      "status_code": 200,
+      "healthy": true,
+      "detail": "{\"healthy_endpoints\":[],\"unhealthy_endpoints\":[],\"healthy_count\":0,\"unhealthy_count\":0}",
+      "models": [
+        "ollama/qwen3-coder:30b"
+      ],
+      "error": ""
+    },
+    {
+      "name": "Layer1Labs Tailscale",
+      "host": "layer1labs.tail8508ce.ts.net",
+      "port": 4000,
+      "kind": "inference",
+      "machine": "layer1labs",
+      "reachable": true,
+      "latency_ms": 48.05,
+      "status_code": 400,
+      "healthy": false,
+      "detail": "HTTP Error 400: Bad Request",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Docker: noerelay-gateway",
+      "host": "127.0.0.1",
+      "port": 8080,
+      "kind": "docker",
+      "machine": "docker",
+      "reachable": true,
+      "latency_ms": 0.0,
+      "status_code": 0,
+      "healthy": true,
+      "detail": "running",
+      "models": [],
+      "error": ""
+    },
+    {
+      "name": "Docker: postgres",
+      "host": "127.0.0.1",
+      "port": 5432,
+      "kind": "docker",
+      "machine": "docker",
+      "reachable": true,
+      "latency_ms": 0.0,
+      "status_code": 0,
+      "healthy": true,
+      "detail": "running",
+      "models": [],
+      "error": ""
+    }
+  ]
+}

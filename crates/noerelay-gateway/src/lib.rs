@@ -941,14 +941,40 @@ fn format_sse(profile: ApiProfile, response: &noerelay_core::CanonicalResponse) 
                 Some(noerelay_core::wire::CanonicalContent::Text(text)) => Some(text.clone()),
                 _ => None,
             });
+            let tool_calls = message.and_then(|message| {
+                message.tool_calls.as_ref().map(|calls| {
+                    calls
+                        .iter()
+                        .map(|call| {
+                            json!({
+                                "index": 0,
+                                "id": call.id,
+                                "type": "function",
+                                "function": {
+                                    "name": call.function.name,
+                                    "arguments": call.function.arguments,
+                                }
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                })
+            });
+            let finish_reason = response
+                .choices
+                .first()
+                .and_then(|choice| choice.finish_reason.as_deref());
             let chunk = json!({
                 "id": response.id,
                 "object": "chat.completion.chunk",
                 "model": response.model,
                 "choices": [{
                     "index": 0,
-                    "delta": {"role": "assistant", "content": content},
-                    "finish_reason": response.choices.first().and_then(|choice| choice.finish_reason.as_deref()),
+                    "delta": {
+                        "role": "assistant",
+                        "content": content,
+                        "tool_calls": tool_calls,
+                    },
+                    "finish_reason": finish_reason,
                 }],
             });
             format!("data: {chunk}\n\ndata: [DONE]\n\n")
@@ -1207,6 +1233,29 @@ async fn release_response(
         },
         observed_evidence_id: schema_valid.then(|| format!("sha256:{output_hash}")),
         verifier_family: None,
+        evidence_kind: Some("observed".into()),
+        uncertainty: Some("none".into()),
+        recommended_action: if schema_valid {
+            Some("none".into())
+        } else {
+            Some("revise".into())
+        },
+        finding_severity: if schema_valid {
+            Some("info".into())
+        } else {
+            Some("high".into())
+        },
+        finding_kind: if schema_valid {
+            Some("other".into())
+        } else {
+            Some("schema_violation".into())
+        },
+        description: Some(if schema_valid {
+            "Response schema validation passed.".into()
+        } else {
+            "Response schema validation failed — output is not valid JSON.".into()
+        }),
+        rationale: None,
     }];
     let (input_tokens, output_tokens) = response_usage(&bytes, stream);
     let (completion, signed_receipt) = match state
@@ -1230,6 +1279,11 @@ async fn release_response(
         .lock()
         .await
         .insert(prepared.run_id.clone(), receipt);
+    // Build evaluator-contract result from verification checks
+    let evaluator_result = build_evaluator_result(&prepared, &results);
+    let evaluator_result_json =
+        serde_json::to_string(&evaluator_result).unwrap_or_else(|_| "{}".into());
+
     let mut builder = Response::builder()
         .status(status)
         .header("content-type", content_type)
@@ -1243,7 +1297,8 @@ async fn release_response(
                 .as_deref()
                 .unwrap_or("unavailable"),
         )
-        .header("x-noerelay-receipt-hash", receipt_hash);
+        .header("x-noerelay-receipt-hash", receipt_hash)
+        .header("x-noerelay-evaluator-result", &evaluator_result_json);
     if stream {
         builder = builder.header("cache-control", "no-cache");
     }
@@ -1254,6 +1309,51 @@ async fn release_response(
             "Could not construct the response",
         )
     })
+}
+
+/// Build an evaluator-contract result from the prepared run and check results.
+fn build_evaluator_result(
+    prepared: &noerelay_core::PreparedRun,
+    results: &[CheckResult],
+) -> noerelay_core::EvaluatorResult {
+    let findings: Vec<noerelay_core::Finding> = prepared
+        .verification_checks
+        .iter()
+        .map(|check| {
+            let result = results
+                .iter()
+                .find(|r| r.check_id == check.check_id)
+                .cloned()
+                .unwrap_or_else(|| CheckResult {
+                    check_id: check.check_id.clone(),
+                    status: CheckStatus::NotRun,
+                    observed_evidence_id: None,
+                    verifier_family: None,
+                    evidence_kind: Some("unsupported".into()),
+                    uncertainty: Some("insufficient_evidence".into()),
+                    recommended_action: Some("gather_evidence".into()),
+                    finding_severity: Some("medium".into()),
+                    finding_kind: Some("missing_evidence".into()),
+                    description: Some(format!(
+                        "Check '{}' was not executed.",
+                        check.check_id
+                    )),
+                    rationale: None,
+                });
+            noerelay_core::Finding::from_check_result(
+                &result,
+                &check.kind,
+                &prepared.run_id,
+            )
+        })
+        .collect();
+
+    noerelay_core::EvaluatorResult::from_findings(
+        "noerelay-gateway",
+        env!("CARGO_PKG_VERSION"),
+        noerelay_core::EvaluatorPhase::AfterImplement,
+        findings,
+    )
 }
 
 async fn abort_run(state: &AppState, run_id: &str, reason_code: &str) {

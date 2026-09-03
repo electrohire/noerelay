@@ -30,6 +30,11 @@ _reference = Path(__file__).resolve().parents[1] / "reference"
 if str(_reference) not in sys.path:
     sys.path.insert(0, str(_reference))
 
+from benchmark.evaluator_contract import (
+    EvaluatorResult,
+    Finding,
+    load_result_file,
+)
 from gateway.cost_model import TrueCostModel, CostComponents
 from gateway.online_learning import PolicyVersionManager
 
@@ -227,10 +232,16 @@ class ImprovementAnalyzer:
             score_delta=score_delta,
         )
 
-        # 1. Detect bottlenecks
+        # 1. Detect bottlenecks from legacy metrics
         report.bottlenecks = self._detect_bottlenecks(
             benchmark_results, previous_results
         )
+
+        # 1b. Detect bottlenecks from evaluator-contract findings
+        contract_bottlenecks = self._detect_contract_bottlenecks(
+            benchmark_results
+        )
+        report.bottlenecks.extend(contract_bottlenecks)
 
         # 2. Generate improvement actions
         report.actions = self._generate_actions(
@@ -399,6 +410,115 @@ class ImprovementAnalyzer:
                         ),
                     )
                 )
+
+        return bottlenecks
+
+    def _detect_contract_bottlenecks(
+        self,
+        results: dict[str, Any],
+    ) -> list[Bottleneck]:
+        """Detect bottlenecks from evaluator-contract findings.
+
+        Extracts :class:`EvaluatorResult` from benchmark results and
+        translates evidence-classified findings into Bottleneck objects
+        for the improvement pipeline.
+        """
+        bottlenecks: list[Bottleneck] = []
+
+        # Try the composed evaluator result first
+        er_data = results.get("evaluator_result")
+        if not er_data:
+            # Fall back to per-cohort evaluator results
+            for cohort_name, report in results.get("cohorts", {}).items():
+                if isinstance(report, dict) and "evaluator_result" in report:
+                    er_data = report["evaluator_result"]
+                    break
+
+        if not er_data or not isinstance(er_data, dict):
+            return bottlenecks
+
+        findings = er_data.get("findings", [])
+        if not findings:
+            return bottlenecks
+
+        # Group findings by severity
+        for f in findings:
+            fid = f.get("id", "unknown")
+            severity = f.get("severity", "info")
+            kind = f.get("kind", "other")
+            subject = f.get("subject", "unknown")
+            description = f.get("description", "")
+            recommended_action = f.get("recommended_action", "none")
+            uncertainty = f.get("uncertainty", "none")
+
+            # Skip passing findings — they are not bottlenecks.
+            if recommended_action == "none":
+                continue
+
+            # Map evaluator-contract severity to bottleneck severity
+            if severity in ("critical", "high"):
+                bottleneck_severity = "critical" if severity == "critical" else "warning"
+            elif severity == "medium":
+                bottleneck_severity = "warning"
+            else:
+                bottleneck_severity = "info"
+
+            # Map finding kind to metric
+            kind_to_metric: dict[str, str] = {
+                "unsupported_claim": "accuracy",
+                "contradiction": "accuracy",
+                "missing_evidence": "accuracy",
+                "ambiguous_requirement": "accuracy",
+                "unverified_assertion": "accuracy",
+                "provenance_gap": "accuracy",
+                "schema_violation": "accuracy",
+                "policy_violation": "safety",
+                "security_concern": "safety",
+                "coverage_gap": "accuracy",
+                "traceability_gap": "accuracy",
+                "risk_unaddressed": "safety",
+                "assumption_unvalidated": "accuracy",
+                "other": "accuracy",
+            }
+            metric = kind_to_metric.get(kind, "accuracy")
+
+            # Build recommendation from finding
+            rec = description
+            if recommended_action and recommended_action != "none":
+                rec += " (action: %s)" % recommended_action
+            if uncertainty and uncertainty not in ("none", "low"):
+                rec += " [uncertainty: %s]" % uncertainty
+
+            bottlenecks.append(
+                Bottleneck(
+                    cohort=subject,
+                    metric=metric,
+                    current_value=0.0,
+                    baseline_value=0.0,
+                    threshold=0.0,
+                    severity=bottleneck_severity,
+                    recommendation=rec,
+                )
+            )
+
+        # Add aggregate finding summary as a meta-bottleneck
+        outcome = er_data.get("outcome", "pass")
+        if outcome in ("block", "iterate"):
+            bottlenecks.append(
+                Bottleneck(
+                    cohort="evaluator-contract",
+                    metric="outcome",
+                    current_value=0.0,
+                    baseline_value=0.0,
+                    threshold=0.0,
+                    severity="critical" if outcome == "block" else "warning",
+                    recommendation=(
+                        "Evaluator contract outcome is '%s'. "
+                        "Address findings before proceeding."
+                        % outcome
+                    ),
+                )
+            )
 
         return bottlenecks
 
@@ -777,7 +897,7 @@ class ImprovementAnalyzer:
         parts.append(
             f"Cycle {report.cycle_number}: "
             f"score={report.composite_score:.4f} "
-            f"(Δ={report.score_delta:+.4f}), "
+            f"(delta={report.score_delta:+.4f}), "
             f"convergence={report.convergence_progress:.0%}"
         )
 

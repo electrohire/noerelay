@@ -5,15 +5,15 @@ services:
       - "${NOERELAY_PORT:-8080}:8080"
     environment:
       NOERELAY_API_KEY: ${NOERELAY_API_KEY:-noerelay-local-development-key-0001}
-      NOERELAY_OPENROUTER_MODE: stub
+      NOERELAY_OPENROUTER_MODE: ${NOERELAY_OPENROUTER_MODE:-live}
       NOERELAY_ORGANIZATION_ID: ${NOERELAY_ORGANIZATION_ID:-local-org}
       NOERELAY_PROJECT_ID: ${NOERELAY_PROJECT_ID:-local-project}
       NOERELAY_ENVIRONMENT_ID: ${NOERELAY_ENVIRONMENT_ID:-development}
-      NOERELAY_CANDIDATES_JSON: '${NOERELAY_CANDIDATES_JSON:-[{"candidate_id":"stub","openrouter_model_id":"anthropic/claude-test","provider":"anthropic","available":true,"capabilities":["text"],"maximum_data_class":"confidential","cost":{"inference_microusd":1,"tools_microusd":0,"verification_microusd":0,"expected_retry_microusd":0,"expected_fallback_microusd":0,"infrastructure_microusd":0,"expected_human_review_microusd":0},"latency_p95_ms":1,"acceptance_lcb_ppm":999999,"supports_independent_verification":true}]}'
+      NOERELAY_CANDIDATES_JSON: '${NOERELAY_CANDIDATES_JSON:-[{"candidate_id":"deepseek-v4-pro","openrouter_model_id":"deepseek/deepseek-v4-pro","provider":"deepseek","available":true,"capabilities":["text"],"maximum_data_class":"confidential","cost":{"inference_microusd":1,"tools_microusd":0,"verification_microusd":0,"expected_retry_microusd":0,"expected_fallback_microusd":0,"infrastructure_microusd":0,"expected_human_review_microusd":0},"latency_p95_ms":1,"acceptance_lcb_ppm":999999,"supports_independent_verification":true}]}'
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       NOERELAY_BUDGET_LIMIT_MICROUSD: ${NOERELAY_BUDGET_LIMIT_MICROUSD:-10000000000}
-      NOERELAY_CONTEXT_BUDGET_TOKENS: ${NOERELAY_CONTEXT_BUDGET_TOKENS:-32768}
+      NOERELAY_CONTEXT_BUDGET_TOKENS: ${NOERELAY_CONTEXT_BUDGET_TOKENS:-131072}
       NOERELAY_RECEIPT_SIGNING_SEED_HEX: ${NOERELAY_RECEIPT_SIGNING_SEED_HEX:-0000000000000000000000000000000000000000000000000000000000000000}
       NOERELAY_RECEIPT_SIGNING_KEY_ID: ${NOERELAY_RECEIPT_SIGNING_KEY_ID:-local-development-key}
       # DATABASE_URL: postgresql://noerelay:${NOERELAY_POSTGRES_PASSWORD:-noerelay-local-db-password}@postgres:5432/noerelay
