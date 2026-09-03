@@ -19,6 +19,8 @@ pub enum EnvelopeStatus {
     Inferred,
     /// Contradicted by other evidence.
     Contradicted,
+    /// No evidence found to support or refute the claim.
+    Unsupported,
     /// Accepted by an independent verifier or human authority.
     Accepted,
     /// Rejected by an independent verifier or human authority.

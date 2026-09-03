@@ -3,22 +3,28 @@
 //! Framework, network, persistence, and language-binding concerns live outside
 //! this crate. The types and pure decisions here are the canonical semantics.
 
+pub mod agent_dispatch;
+pub mod analytics;
 pub mod artifacts;
 pub mod budget;
 pub mod context;
 pub mod contract;
 pub mod epistemic;
+pub mod evaluator_ingestion;
 pub mod evaluator_result;
 pub mod evidence;
 pub mod execution;
 pub mod governance;
 pub mod iam;
 pub mod ledger;
+pub mod ranking;
 pub mod receipt;
 pub mod recommendation;
 pub mod registry;
+pub mod route_target;
 pub mod routing;
 pub mod runtime;
+pub mod tool_execution;
 pub mod tools;
 pub mod traceability;
 pub mod types;
@@ -31,6 +37,9 @@ pub use budget::{BudgetAccount, BudgetError, BudgetReservation};
 pub use context::{ContextCompiler, ContextError, ContextManifest, ContextNode, NodeKind};
 pub use contract::{ContractCompiler, ContractError, TaskContract};
 pub use epistemic::{Claim, ClaimKind, EpistemicState, EvidencePolarity};
+pub use evaluator_ingestion::{
+    HookResult, NoerelayAction, SpecKitHook, map_outcome_to_action,
+};
 pub use evaluator_result::{
     EvaluatorInfo, EvaluatorMetadata, EvaluatorOutcome, EvaluatorPhase, EvaluatorResult,
     EvidenceKind as EvaluatorEvidenceKind, EvidenceRef as EvaluatorEvidenceRef, Finding,
@@ -42,6 +51,11 @@ pub use execution::*;
 pub use governance::*;
 pub use iam::*;
 pub use ledger::{Ledger, LedgerError, LedgerEvent, LedgerEventKind};
+pub use ranking::{
+    AdmissibleCandidate, AdviceValidationError, AdvisoryRanker, CandidateRanking,
+    RankingAdvice, RankingContext, RankingMode, RankerError, RankerIdentity,
+    RANKING_ADVICE_SCHEMA_VERSION, candidate_set_hash, features_hash, validate_advice,
+};
 pub use receipt::{ReceiptSignatureError, ReceiptSigner, ReceiptVerifier, SignedRunReceipt};
 pub use recommendation::{ModelObservation, Recommendation, Recommender};
 pub use registry::{
@@ -50,7 +64,8 @@ pub use registry::{
     RegistryLifecycle, ToolRevision as RegistryToolRevision,
 };
 pub use routing::{
-    Candidate, CandidateRejection, Constraints, RejectionReason, RouteDecision, Router,
+    Candidate, CandidateRejection, Constraints, RankingProvenance, RejectionReason,
+    RouteDecision, Router, StagedRouteDecision, StagedRouter,
 };
 pub use runtime::{
     Completion, GovernanceRuntime, GovernanceSnapshot, PreparedRun, RunReceipt, RuntimeError,
