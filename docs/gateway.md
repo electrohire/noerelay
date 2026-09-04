@@ -9,20 +9,22 @@ reinterpretation unless the compatibility profile documents the difference").
 
 ## 2. Advertised model
 
-The gateway advertises a single virtual model:
+The gateway advertises a single virtual model. AXIOVEX Sentinel separately
+provides a direct local recovery model, but that model is not a gateway route:
 
-- **`noerelay/epr-1`** — the EPR-1 evidence-governed portfolio runtime.
+- **`axiovex-agni`** — the primary evidence-governed control-plane model.
+- **`axiovex-agni-recovery`** — the independent local maintenance model exposed directly by AXIOVEX Sentinel, outside the gateway.
 
 Any other `model` value in a request is rejected:
 
 | Requested model | HTTP status | Meaning |
 |---|---|---|
-| `noerelay/epr-1` | 200 | Virtual model; routed by NoeRelay |
+| `axiovex-agni` | 200 | Primary virtual model; routed by NoeRelay |
 | `openai/*`, `openrouter/auto`, `api.openai.com` references | 403 | Denied by deterministic policy (EPR-API-007) |
 | Anything else | 404 | Model not found |
 
 The selected upstream model identity is **ledger-bound**, not response-bound.
-The `model` field on success responses always echoes `noerelay/epr-1`. The
+The `model` field on success responses always echoes the requested AXIOVEX alias. The
 upstream route is discoverable via the evidence receipt at
 `GET /v1/epr/runs/{run_id}`.
 
@@ -62,7 +64,7 @@ skeleton performs a non-streaming upstream call and chunks the response.
 ### 4.2 `model` field semantics
 
 The `model` field on success responses echoes the requested virtual model id
-(`noerelay/epr-1`), not the upstream model id. This differs from OpenAI's
+(for example, `axiovex-agni`), not the upstream model id. This differs from OpenAI's
 convention of returning the actual model that served the request. The upstream
 route is disclosed via the `epr.route_decision_id` and the evidence receipt.
 
@@ -163,7 +165,7 @@ The server binds to ``127.0.0.1:8080`` by default. Example request:
 ```bash
 curl -s http://127.0.0.1:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"noerelay/epr-1","messages":[{"role":"user","content":"Hello"}]}'
+  -d '{"model":"axiovex-agni","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 ## 9. Conformance checklist

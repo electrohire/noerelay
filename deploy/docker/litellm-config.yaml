@@ -1,0 +1,44 @@
+model_list:
+  - model_name: gpu-pool
+    litellm_params:
+      model: os.environ/LITELLM_LOCAL_MODEL
+      api_base: http://ollama:11434
+      rpm: 120
+      timeout: 600
+      think: false
+  # A separate local-only group is the deterministic fallback when the
+  # shuffled pool selected an unavailable remote deployment.
+  - model_name: local-gpu
+    litellm_params:
+      model: os.environ/LITELLM_LOCAL_MODEL
+      api_base: http://ollama:11434
+      rpm: 120
+      timeout: 600
+      think: false
+  - model_name: gpu-pool
+    litellm_params:
+      model: os.environ/LITELLM_REMOTE_MODEL
+      api_base: http://remote-gpu-tunnel:4001/v1
+      api_key: os.environ/REMOTE_GPU_API_KEY
+      rpm: 120
+      timeout: 600
+  - model_name: openrouter-fallback
+    litellm_params:
+      model: openrouter/auto
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 600
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 2
+  retry_after: 1
+  allowed_fails: 0
+  cooldown_time: 30
+  fallbacks:
+    - gpu-pool: [local-gpu, openrouter-fallback]
+    - local-gpu: [openrouter-fallback]
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+litellm_settings:
+  drop_params: true
+  request_timeout: 600
+  set_verbose: false

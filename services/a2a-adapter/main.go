@@ -130,7 +130,7 @@ func messageText(message *a2a.Message, maximumBytes int) (string, error) {
 
 func (executor *relayExecutor) invokeNoeRelay(ctx context.Context, input string, execCtx *a2asrv.ExecutorContext) (string, error) {
 	payload, err := json.Marshal(map[string]any{
-		"model": "noerelay/epr-1",
+		"model": "axiovex-agni",
 		"input": input,
 		"metadata": map[string]string{
 			"a2a_task_id":    string(execCtx.TaskID),

@@ -20,8 +20,7 @@ use noerelay_core::{
     SignedRunReceipt, StagedRouter, TestCase, TraceGraph, UsageMeasurement, WireCanonicalRequest,
 };
 use noerelay_store::{
-    CostRollupRow, ExecutionRepository, IamRepository, PostgresAuthorityStore, RegistryRepository,
-    StoreError,
+    CostRollupRow, ExecutionRepository, IamRepository, PostgresAuthorityStore, StoreError,
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -38,6 +37,9 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::stub_provider::StubProvider;
+
+/// Stable public aliases exposed by the AXIOVEX Sentinel API.
+const PRIMARY_PUBLIC_MODEL_ID: &str = "axiovex-agni";
 
 /// HTTP client for the LLMRouter sidecar, implementing [`AdvisoryRanker`].
 ///
@@ -148,6 +150,8 @@ pub enum ConfigError {
     ReceiptSigner(#[from] ReceiptSignatureError),
     #[error("NOERELAY_CONTEXT_BUDGET_TOKENS must be a positive integer")]
     InvalidContextBudget,
+    #[error("NOERELAY_PROVIDER_TIMEOUT_SECONDS must be a positive integer")]
+    InvalidProviderTimeout,
 }
 
 impl GatewayConfig {
@@ -232,6 +236,13 @@ impl GatewayConfig {
         let ranker_sidecar_url = std::env::var("NOERELAY_RANKER_SIDECAR_URL")
             .ok()
             .filter(|v| !v.trim().is_empty());
+        let request_timeout = std::env::var("NOERELAY_PROVIDER_TIMEOUT_SECONDS")
+            .unwrap_or_else(|_| "600".into())
+            .parse::<u64>()
+            .ok()
+            .filter(|value| *value > 0)
+            .map(Duration::from_secs)
+            .ok_or(ConfigError::InvalidProviderTimeout)?;
         Ok(Self {
             bearer_key_sha256: Sha256::digest(api_key.as_bytes()).into(),
             openrouter_api_key,
@@ -242,7 +253,7 @@ impl GatewayConfig {
             stub_mode,
             default_scope,
             candidates,
-            request_timeout: Duration::from_secs(120),
+            request_timeout,
             maximum_body_bytes: 2 * 1024 * 1024,
             budget_limit_microusd,
             database_url,
@@ -271,7 +282,6 @@ pub struct AppState {
     iam_repo: Option<IamRepository>,
     api_key_repo: Option<noerelay_store::ApiKeyRepository>,
     oidc_providers: Vec<Arc<dyn noerelay_core::iam::IdentityProvider>>,
-    database_pool: Option<PgPool>,
     execution_repo: Option<ExecutionRepository>,
     storage_version: Arc<Mutex<i64>>,
     ranker_client: Option<RankerClient>,
@@ -319,7 +329,6 @@ impl AppState {
             iam_repo: None,
             api_key_repo: None,
             oidc_providers: Vec::new(),
-            database_pool: None,
             execution_repo: None,
             storage_version: Arc::new(Mutex::new(0)),
             ranker_client,
@@ -379,7 +388,6 @@ impl AppState {
             iam_repo,
             api_key_repo,
             oidc_providers,
-            database_pool: Some(pool.clone()),
             execution_repo: Some(ExecutionRepository::new(pool)),
             storage_version: Arc::new(Mutex::new(version)),
             ranker_client,
@@ -593,50 +601,20 @@ async fn ready(State(state): State<AppState>) -> Response {
 }
 
 async fn models(
-    State(state): State<AppState>,
-    identity: Option<Extension<AuthenticatedIdentity>>,
+    State(_state): State<AppState>,
+    _identity: Option<Extension<AuthenticatedIdentity>>,
 ) -> Response {
-    if let (Some(pool), Some(Extension(identity))) = (&state.database_pool, identity) {
-        let repository = RegistryRepository::new(pool.clone(), identity.organization_id);
-        return match repository
-            .list_active_models(identity.organization_id)
-            .await
-        {
-            Ok(models) => Json(json!({
-                "object": "list",
-                "data": models.into_iter().map(|model| json!({
-                    "id": model.entity_id,
-                    "object": "model",
-                    "created": model.created_at.timestamp(),
-                    "owned_by": model.provider,
-                })).collect::<Vec<_>>()
-            }))
-            .into_response(),
-            Err(_) => api_error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ApiError::invalid_request("The model registry is unavailable.", None),
-            ),
-        };
-    }
-    let data: Vec<Value> = state
-        .config
-        .candidates
-        .iter()
-        .filter(|candidate| candidate.available)
-        .map(|candidate| {
-            json!({
-                "id": candidate.openrouter_model_id,
+    Json(json!({
+        "object": "list",
+        "data": [
+            {
+                "id": PRIMARY_PUBLIC_MODEL_ID,
                 "object": "model",
-                "owned_by": "noerelay",
-            })
-        })
-        .chain(std::iter::once(json!({
-            "id": "noerelay/epr-1",
-            "object": "model",
-            "owned_by": "noerelay",
-        })))
-        .collect();
-    Json(json!({"object":"list","data":data})).into_response()
+                "owned_by": "axiovex"
+            }
+        ]
+    }))
+    .into_response()
 }
 
 async fn receipt(
@@ -864,7 +842,7 @@ async fn proxy_openai_request(
         ApiProfile::ChatCompletions => ChatCompletionsConverter::parse_request(&request_value),
         ApiProfile::Responses => ResponsesConverter::parse_request(&request_value),
     };
-    let wire_request = match wire_request {
+    let mut wire_request = match wire_request {
         Ok(value) => value,
         Err(errors) => {
             return api_error_response(
@@ -876,17 +854,40 @@ async fn proxy_openai_request(
             );
         }
     };
+    // Open WebUI exposes `ask_user` as a presentation helper. Smaller local
+    // models tend to over-select it for greetings and may serialize the call
+    // as visible JSON. Agni can ask a clarification in ordinary text, so this
+    // one UI-only helper never crosses the provider boundary.
+    if let Some(tools) = wire_request.tools.as_mut() {
+        tools.retain(|tool| !is_ask_user_tool(&tool.function.name));
+    }
+    let self_capability_inquiry = is_self_capability_inquiry(&wire_request);
+    let repeated_tool_loop = has_repeated_tool_loop(&wire_request);
+    if self_capability_inquiry || repeated_tool_loop {
+        wire_request.tools = None;
+    }
     if let Err(response) =
         validate_requested_model(&state, identity.as_deref(), &wire_request).await
     {
         return response;
     }
     let stream = wire_request.stream;
+    let allowed_tool_names = wire_request
+        .tools
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .map(|tool| tool.function.name.clone())
+        .collect::<BTreeSet<_>>();
     let messages = governance_messages(&wire_request);
     let mut request = request_value
         .as_object()
         .cloned()
         .expect("request object checked above");
+    remove_ask_user_tool(&mut request);
+    if self_capability_inquiry || repeated_tool_loop {
+        disable_tool_use(&mut request);
+    }
     let upstream_path = match profile {
         ApiProfile::ChatCompletions => "chat/completions",
         ApiProfile::Responses => "responses",
@@ -923,6 +924,8 @@ async fn proxy_openai_request(
         scope.user_id = header_or(&headers, "x-noerelay-user", &scope.user_id);
     }
     scope.session_id = header_or(&headers, "x-noerelay-session", &scope.session_id);
+    let required_capabilities = vec!["text".into()];
+    let requested_public_model = wire_request.model.clone();
     let canonical = CanonicalRequest {
         request_id: header_or(&headers, "x-request-id", &Uuid::new_v4().to_string()),
         scope,
@@ -930,7 +933,7 @@ async fn proxy_openai_request(
         risk,
         data_class: DataClass::Internal,
         acceptance_criteria,
-        required_capabilities: vec!["text".into()],
+        required_capabilities,
         allowed_tools: wire_request
             .tools
             .as_deref()
@@ -944,6 +947,17 @@ async fn proxy_openai_request(
             (
                 "omitted_context_nodes".into(),
                 omitted_context_nodes.to_string(),
+            ),
+            (
+                "tool_policy_outcome".into(),
+                if repeated_tool_loop {
+                    "repetition_circuit_breaker"
+                } else if self_capability_inquiry {
+                    "self_description_tools_not_required"
+                } else {
+                    "tools_available"
+                }
+                .into(),
             ),
         ]),
         max_cost_microusd: None,
@@ -977,6 +991,13 @@ async fn proxy_openai_request(
         .clone()
         .expect("prepared run always has a selected route");
     request.insert("model".into(), Value::String(model));
+    apply_agent_instructions(
+        &mut request,
+        profile,
+        &requested_public_model,
+        self_capability_inquiry,
+        repeated_tool_loop,
+    );
     if state.config.stub_mode {
         let canonical_response = StubProvider.complete(&wire_request);
         let formatted = match profile {
@@ -1057,6 +1078,8 @@ async fn proxy_openai_request(
             );
         }
     };
+    let bytes = normalize_legacy_tool_calls(bytes, stream, profile, &allowed_tool_names);
+    let bytes = rewrite_public_model(bytes, stream, &requested_public_model);
     release_response(
         &state,
         &prepared,
@@ -1070,6 +1093,342 @@ async fn proxy_openai_request(
         bytes,
     )
     .await
+}
+
+fn parse_legacy_tool_call(
+    content: &str,
+    allowed_tool_names: &BTreeSet<String>,
+) -> Option<(String, String)> {
+    let mut candidate = content.trim();
+    if candidate.starts_with("```json") && candidate.ends_with("```") {
+        candidate = candidate
+            .strip_prefix("```json")?
+            .strip_suffix("```")?
+            .trim();
+    } else if candidate.starts_with("```") && candidate.ends_with("```") {
+        candidate = candidate.strip_prefix("```")?.strip_suffix("```")?.trim();
+    }
+    let value = serde_json::from_str::<Value>(candidate).ok()?;
+    let object = value.as_object()?;
+    if object.keys().any(|key| key != "name" && key != "arguments") {
+        return None;
+    }
+    let name = object.get("name")?.as_str()?.replace("\\_", "_");
+    if !allowed_tool_names.contains(&name) {
+        return None;
+    }
+    let arguments = match object.get("arguments")? {
+        Value::String(arguments) => arguments.clone(),
+        arguments @ Value::Object(_) => serde_json::to_string(arguments).ok()?,
+        _ => return None,
+    };
+    serde_json::from_str::<Value>(&arguments).ok()?;
+    Some((name, arguments))
+}
+
+fn normalize_legacy_tool_calls(
+    bytes: Bytes,
+    stream: bool,
+    profile: ApiProfile,
+    allowed_tool_names: &BTreeSet<String>,
+) -> Bytes {
+    if allowed_tool_names.is_empty() {
+        return bytes;
+    }
+    if stream && profile == ApiProfile::ChatCompletions {
+        return normalize_streamed_legacy_tool_call(bytes, allowed_tool_names);
+    }
+    if stream {
+        return bytes;
+    }
+    let Ok(mut value) = serde_json::from_slice::<Value>(&bytes) else {
+        return bytes;
+    };
+    match profile {
+        ApiProfile::ChatCompletions => {
+            let Some(choice) = value
+                .get_mut("choices")
+                .and_then(Value::as_array_mut)
+                .and_then(|choices| choices.first_mut())
+            else {
+                return bytes;
+            };
+            let Some(message) = choice.get_mut("message").and_then(Value::as_object_mut) else {
+                return bytes;
+            };
+            let Some(content) = message.get("content").and_then(Value::as_str) else {
+                return bytes;
+            };
+            let Some((name, arguments)) = parse_legacy_tool_call(content, allowed_tool_names)
+            else {
+                return bytes;
+            };
+            message.insert("content".into(), Value::Null);
+            message.insert(
+                "tool_calls".into(),
+                json!([{
+                    "id": format!("call_{}", Uuid::new_v4()),
+                    "type": "function",
+                    "function": {"name": name, "arguments": arguments}
+                }]),
+            );
+            if let Some(choice) = choice.as_object_mut() {
+                choice.insert("finish_reason".into(), Value::String("tool_calls".into()));
+            }
+        }
+        ApiProfile::Responses => {
+            let Some(output) = value.get_mut("output").and_then(Value::as_array_mut) else {
+                return bytes;
+            };
+            let call = output.iter().find_map(|item| {
+                item.get("content")
+                    .and_then(Value::as_array)
+                    .and_then(|content| content.first())
+                    .and_then(|content| content.get("text"))
+                    .and_then(Value::as_str)
+                    .and_then(|text| parse_legacy_tool_call(text, allowed_tool_names))
+            });
+            let Some((name, arguments)) = call else {
+                return bytes;
+            };
+            let call_id = format!("call_{}", Uuid::new_v4());
+            *output = vec![json!({
+                "id": call_id,
+                "call_id": call_id,
+                "type": "function_call",
+                "status": "completed",
+                "name": name,
+                "arguments": arguments
+            })];
+        }
+    }
+    serde_json::to_vec(&value).map(Bytes::from).unwrap_or(bytes)
+}
+
+fn normalize_streamed_legacy_tool_call(
+    bytes: Bytes,
+    allowed_tool_names: &BTreeSet<String>,
+) -> Bytes {
+    let body = String::from_utf8_lossy(&bytes);
+    let mut content = String::new();
+    let mut template = None;
+    for line in body.lines() {
+        let Some(data) = line.strip_prefix("data: ") else {
+            continue;
+        };
+        if data == "[DONE]" {
+            continue;
+        }
+        let Ok(value) = serde_json::from_str::<Value>(data) else {
+            return bytes;
+        };
+        if template.is_none() {
+            template = Some(value.clone());
+        }
+        if let Some(fragment) = value
+            .pointer("/choices/0/delta/content")
+            .and_then(Value::as_str)
+        {
+            content.push_str(fragment);
+        }
+    }
+    let Some((name, arguments)) = parse_legacy_tool_call(&content, allowed_tool_names) else {
+        return bytes;
+    };
+    let mut chunk = template.unwrap_or_else(|| json!({}));
+    let Some(object) = chunk.as_object_mut() else {
+        return bytes;
+    };
+    object.insert(
+        "object".into(),
+        Value::String("chat.completion.chunk".into()),
+    );
+    object.insert(
+        "choices".into(),
+        json!([{
+            "index": 0,
+            "delta": {
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [{
+                    "index": 0,
+                    "id": format!("call_{}", Uuid::new_v4()),
+                    "type": "function",
+                    "function": {"name": name, "arguments": arguments}
+                }]
+            },
+            "finish_reason": "tool_calls"
+        }]),
+    );
+    Bytes::from(format!("data: {chunk}\n\ndata: [DONE]\n\n"))
+}
+
+fn is_ask_user_tool(name: &str) -> bool {
+    name.replace("\\_", "_").eq_ignore_ascii_case("ask_user")
+}
+
+fn is_self_capability_inquiry(request: &WireCanonicalRequest) -> bool {
+    let Some(content) = request.messages.iter().rev().find_map(|message| {
+        matches!(message.role, noerelay_core::wire::CanonicalRole::User)
+            .then(|| message.content.as_ref().map(canonical_content_text))
+            .flatten()
+    }) else {
+        return false;
+    };
+    let normalized = content.to_ascii_lowercase();
+    normalized.contains("your capabilities")
+        || normalized.contains("what can you do")
+        || normalized.contains("how do you work")
+        || normalized.contains("how you work")
+        || normalized.contains("your models capable")
+        || normalized.contains("your model capable")
+        || normalized.contains("how do you route")
+        || normalized.contains("how you route")
+        || normalized.contains("route to different models")
+        || normalized.contains("model routing")
+        || normalized.contains("routing and stack")
+        || normalized.contains("your stack")
+        || normalized.contains("noerelay control plane")
+        || normalized.contains("models integrated into")
+        || normalized.contains("axiovex sentinel system")
+}
+
+/// Detect a provider repeatedly requesting an identical tool invocation during
+/// one user turn. Open WebUI resubmits prior assistant tool calls and results on
+/// each continuation, so this works without process-local conversational state.
+/// Two identical calls or eight total calls are enough to force a text answer.
+fn has_repeated_tool_loop(request: &WireCanonicalRequest) -> bool {
+    let start = request
+        .messages
+        .iter()
+        .rposition(|message| matches!(message.role, noerelay_core::wire::CanonicalRole::User))
+        .map_or(0, |index| index + 1);
+    let mut signatures = BTreeMap::<String, usize>::new();
+    let mut total_calls = 0_usize;
+
+    for call in request.messages[start..]
+        .iter()
+        .filter_map(|message| message.tool_calls.as_deref())
+        .flatten()
+    {
+        total_calls += 1;
+        let normalized_arguments = serde_json::from_str::<Value>(&call.function.arguments)
+            .and_then(|value| serde_json::to_string(&value))
+            .unwrap_or_else(|_| call.function.arguments.trim().to_owned());
+        let signature = format!("{}\n{normalized_arguments}", call.function.name);
+        let count = signatures.entry(signature).or_default();
+        *count += 1;
+        if *count >= 2 || total_calls >= 8 {
+            return true;
+        }
+    }
+    false
+}
+
+fn disable_tool_use(request: &mut serde_json::Map<String, Value>) {
+    request.remove("tools");
+    request.insert("tool_choice".into(), Value::String("none".into()));
+}
+
+fn remove_ask_user_tool(request: &mut serde_json::Map<String, Value>) {
+    let Some(tools) = request.get_mut("tools").and_then(Value::as_array_mut) else {
+        return;
+    };
+    tools.retain(|tool| {
+        let name = tool
+            .get("function")
+            .and_then(|function| function.get("name"))
+            .or_else(|| tool.get("name"))
+            .and_then(Value::as_str);
+        name.is_none_or(|name| !is_ask_user_tool(name))
+    });
+    if tools.is_empty() {
+        disable_tool_use(request);
+    }
+}
+
+fn rewrite_public_model(bytes: Bytes, stream: bool, public_model_id: &str) -> Bytes {
+    if !stream {
+        let Ok(mut value) = serde_json::from_slice::<Value>(&bytes) else {
+            return bytes;
+        };
+        if let Some(object) = value.as_object_mut() {
+            object.insert("model".into(), Value::String(public_model_id.into()));
+        }
+        return serde_json::to_vec(&value).map(Bytes::from).unwrap_or(bytes);
+    }
+
+    let body = String::from_utf8_lossy(&bytes);
+    let mut rewritten = String::with_capacity(body.len());
+    for segment in body.split_inclusive('\n') {
+        let (line, newline) = segment
+            .strip_suffix('\n')
+            .map_or((segment, ""), |line| (line, "\n"));
+        if let Some(data) = line.strip_prefix("data: ")
+            && data != "[DONE]"
+            && let Ok(mut value) = serde_json::from_str::<Value>(data)
+        {
+            if let Some(object) = value.as_object_mut() {
+                object.insert("model".into(), Value::String(public_model_id.into()));
+            }
+            rewritten.push_str("data: ");
+            rewritten.push_str(&serde_json::to_string(&value).unwrap_or_else(|_| data.into()));
+            rewritten.push_str(newline);
+            continue;
+        }
+        rewritten.push_str(line);
+        rewritten.push_str(newline);
+    }
+    Bytes::from(rewritten)
+}
+
+fn apply_agent_instructions(
+    request: &mut serde_json::Map<String, Value>,
+    profile: ApiProfile,
+    _model: &str,
+    self_capability_inquiry: bool,
+    repeated_tool_loop: bool,
+) {
+    let role = "You are AXIOVEX Agni, the governed assistant presented by AXIOVEX Sentinel and powered by the NoeRelay Intelligent AI Control Plane.";
+    let loop_instruction = if repeated_tool_loop {
+        " A repeated-tool circuit breaker is active for this response. Do not call any tool. Use the results already present in the conversation, answer directly, and clearly identify anything still unknown."
+    } else {
+        ""
+    };
+    let product_manifest = if self_capability_inquiry {
+        "\n\nYour factual product identity: AXIOVEX Sentinel is the Open WebUI-based enterprise interface. NoeRelay is the Rust-based Intelligent AI Control Plane behind its OpenAI-compatible API. NoeRelay compiles and cleans context, enforces policy and risk constraints, selects an admissible internal route using capability, cost, latency, and acceptance evidence, records governed runs and signed hash-linked receipts in PostgreSQL, and reports usage and cost. The axiovex-agni route uses a LiteLLM model plane spanning host-GPU Ollama and the remote GPU, with OpenRouter failover. AXIOVEX Sentinel separately exposes axiovex-agni-recovery through direct host-GPU Ollama inference, deliberately bypassing NoeRelay so maintainers can repair the control plane when it is unavailable. Open Terminal supplies permission-controlled workspace execution; Docling supplies document extraction, OCR, and PDF processing; optional WebUI tools supply web search and other configured actions. Tool availability always depends on deployment configuration and the signed-in user's permissions; never claim access you do not have. Public AXIOVEX model names intentionally hide changeable provider model identifiers."
+    } else {
+        ""
+    };
+    let self_description_instruction = if self_capability_inquiry {
+        " Answer self-description, routing, and architecture questions directly from the factual product identity above. Never search knowledge bases merely to explain your own built-in architecture."
+    } else {
+        ""
+    };
+    let instructions = format!(
+        "{role}{product_manifest}\n\nAnswer greetings, capability questions, explanations, and ordinary conversation directly in natural language.{self_description_instruction} Use a tool only when current external data or an action is actually required. Never call ask_user merely to present generic choices or ask what the user wants after they already made a clear request. Never emit a serialized tool-call object as assistant text; when a tool is necessary, use the provider's native function-calling protocol. Do not identify yourself as the underlying provider or base model.{loop_instruction}"
+    );
+    match profile {
+        ApiProfile::ChatCompletions => {
+            if let Some(messages) = request.get_mut("messages").and_then(Value::as_array_mut) {
+                messages.insert(0, json!({"role": "system", "content": instructions}));
+            }
+        }
+        ApiProfile::Responses => {
+            let existing = request
+                .get("instructions")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            request.insert(
+                "instructions".into(),
+                Value::String(if existing.is_empty() {
+                    instructions
+                } else {
+                    format!("{instructions}\n\n{existing}")
+                }),
+            );
+        }
+    }
 }
 
 fn format_sse(profile: ApiProfile, response: &noerelay_core::CanonicalResponse) -> String {
@@ -1170,39 +1529,17 @@ fn canonical_content_text(content: &noerelay_core::wire::CanonicalContent) -> St
 }
 
 async fn validate_requested_model(
-    state: &AppState,
-    identity: Option<&AuthenticatedIdentity>,
+    _state: &AppState,
+    _identity: Option<&AuthenticatedIdentity>,
     request: &WireCanonicalRequest,
 ) -> Result<(), Response> {
-    // The virtual model alias is always allowed; it resolves at routing time.
-    if request.model == "noerelay/epr-1" {
+    if request.model == PRIMARY_PUBLIC_MODEL_ID {
         return Ok(());
     }
-    if let (Some(pool), Some(identity)) = (&state.database_pool, identity) {
-        let repository = RegistryRepository::new(pool.clone(), identity.organization_id);
-        return match repository.get_active_model(&request.model).await {
-            Ok(Some(_)) => Ok(()),
-            Ok(None) => Err(api_error_response(
-                StatusCode::NOT_FOUND,
-                ApiError::model_not_found(&request.model),
-            )),
-            Err(_) => Err(internal_api_error()),
-        };
-    }
-    let exists = request.model == "noerelay/epr-1"
-        || state.config.candidates.iter().any(|candidate| {
-            candidate.available
-                && (candidate.candidate_id == request.model
-                    || candidate.openrouter_model_id == request.model)
-        });
-    if exists {
-        Ok(())
-    } else {
-        Err(api_error_response(
-            StatusCode::NOT_FOUND,
-            ApiError::model_not_found(&request.model),
-        ))
-    }
+    Err(api_error_response(
+        StatusCode::NOT_FOUND,
+        ApiError::model_not_found(&request.model),
+    ))
 }
 
 struct DurableExecution {
@@ -1220,6 +1557,13 @@ async fn create_durable_run(
     let (Some(repository), Some(identity)) = (&state.execution_repo, identity) else {
         return Ok(None);
     };
+    // A fresh deployment authenticated with its bootstrap key has a stateless
+    // identity until an organization principal is provisioned. The core
+    // authority snapshot and signed receipt are still persisted, but the
+    // relational execution projection cannot satisfy its tenant foreign keys.
+    if identity.organization_id.0 == Uuid::nil() || identity.principal_id.0 == Uuid::nil() {
+        return Ok(None);
+    }
     let run = repository
         .create_run(
             identity.organization_id,
@@ -1854,7 +2198,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn model_list_exposes_virtual_and_explicit_candidates() {
+    async fn model_list_exposes_only_governed_primary_model() {
         let response = app(state("http://127.0.0.1:1".into()))
             .oneshot(authenticated_request("GET", "/v1/models", Body::empty()))
             .await
@@ -1863,7 +2207,8 @@ mod tests {
         let body: Value =
             serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
                 .unwrap();
-        assert_eq!(body["data"].as_array().unwrap().len(), 2);
+        assert_eq!(body["data"].as_array().unwrap().len(), 1);
+        assert_eq!(body["data"][0]["id"], PRIMARY_PUBLIC_MODEL_ID);
     }
 
     #[tokio::test]
@@ -1872,7 +2217,7 @@ mod tests {
             "POST",
             "/v1/chat/completions",
             Body::from(
-                r#"{"model":"noerelay/epr-1","messages":[{"role":"user","content":"deploy"}]}"#,
+                r#"{"model":"axiovex-agni","messages":[{"role":"user","content":"deploy"}]}"#,
             ),
         );
         let mut request = request;
@@ -1896,7 +2241,8 @@ mod tests {
             let size = socket.read(&mut received).await.unwrap();
             let request_text = String::from_utf8_lossy(&received[..size]);
             assert!(request_text.contains("anthropic/claude-test"));
-            assert!(!request_text.contains("\"model\":\"noerelay/epr-1\""));
+            assert!(!request_text.contains("\"model\":\"axiovex-agni\""));
+            assert!(request_text.contains("Answer greetings"));
             let body = r#"{"id":"chatcmpl-test","object":"chat.completion","choices":[]}"#;
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -1912,7 +2258,7 @@ mod tests {
                 "POST",
                 "/v1/chat/completions",
                 Body::from(
-                    r#"{"model":"noerelay/epr-1","messages":[{"role":"user","content":"hello"}]}"#,
+                    r#"{"model":"axiovex-agni","messages":[{"role":"user","content":"hello"}]}"#,
                 ),
             ))
             .await
@@ -1932,6 +2278,10 @@ mod tests {
             .to_str()
             .unwrap()
             .to_owned();
+        let public_response: Value =
+            serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(public_response["model"], PRIMARY_PUBLIC_MODEL_ID);
         let receipt_response = application
             .oneshot(authenticated_request(
                 "GET",
@@ -1956,6 +2306,159 @@ mod tests {
         provider.await.unwrap();
     }
 
+    #[test]
+    fn public_model_is_rewritten_in_stream_events() {
+        let upstream = Bytes::from_static(
+            b"data: {\"id\":\"chatcmpl-test\",\"model\":\"gpu-pool\",\"choices\":[]}\n\ndata: [DONE]\n\n",
+        );
+        let rewritten = String::from_utf8(
+            rewrite_public_model(upstream, true, PRIMARY_PUBLIC_MODEL_ID).to_vec(),
+        )
+        .unwrap();
+        assert!(rewritten.contains("\"model\":\"axiovex-agni\""));
+        assert!(!rewritten.contains("gpu-pool"));
+        assert!(rewritten.contains("data: [DONE]"));
+    }
+
+    #[test]
+    fn ask_user_is_removed_without_disabling_execution_tools() {
+        let mut request = json!({
+            "tools": [
+                {"type":"function","function":{"name":"ask_user"}},
+                {"type":"function","function":{"name":"run_terminal"}}
+            ],
+            "tool_choice": "auto"
+        })
+        .as_object()
+        .unwrap()
+        .clone();
+        remove_ask_user_tool(&mut request);
+        assert_eq!(request["tools"].as_array().unwrap().len(), 1);
+        assert_eq!(request["tools"][0]["function"]["name"], "run_terminal");
+        assert_eq!(request["tool_choice"], "auto");
+    }
+
+    #[test]
+    fn escaped_ask_user_is_removed_and_tool_choice_is_disabled() {
+        let mut request = json!({
+            "tools": [{"type":"function","name":"ask\\_user"}],
+            "tool_choice": "auto"
+        })
+        .as_object()
+        .unwrap()
+        .clone();
+        remove_ask_user_tool(&mut request);
+        assert!(request.get("tools").is_none());
+        assert_eq!(request["tool_choice"], "none");
+    }
+
+    #[test]
+    fn legacy_json_tool_envelope_is_promoted_to_native_chat_tool_call() {
+        let allowed = BTreeSet::from(["list_knowledge_bases".to_owned()]);
+        let upstream = Bytes::from_static(
+            br#"{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"{\"name\":\"list_knowledge_bases\",\"arguments\":{\"count\":5}}"}}],"model":"gpu-pool"}"#,
+        );
+        let normalized =
+            normalize_legacy_tool_calls(upstream, false, ApiProfile::ChatCompletions, &allowed);
+        let value: Value = serde_json::from_slice(&normalized).unwrap();
+        assert_eq!(value["choices"][0]["finish_reason"], "tool_calls");
+        assert_eq!(
+            value["choices"][0]["message"]["tool_calls"][0]["function"]["name"],
+            "list_knowledge_bases"
+        );
+        assert!(value["choices"][0]["message"]["content"].is_null());
+    }
+
+    #[test]
+    fn streamed_legacy_json_tool_envelope_is_promoted_to_native_tool_call() {
+        let allowed = BTreeSet::from(["list_knowledge_bases".to_owned()]);
+        let upstream = Bytes::from_static(
+            b"data: {\"id\":\"chatcmpl-test\",\"model\":\"gpu-pool\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"name\\\":\\\"list_knowledge_bases\\\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-test\",\"model\":\"gpu-pool\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\\\"arguments\\\":{\\\"count\\\":5}}\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+        );
+        let normalized =
+            normalize_legacy_tool_calls(upstream, true, ApiProfile::ChatCompletions, &allowed);
+        let text = String::from_utf8(normalized.to_vec()).unwrap();
+        assert!(text.contains("list_knowledge_bases"));
+        assert!(text.contains("tool_calls"));
+        assert!(text.contains("data: [DONE]"));
+        assert!(!text.contains("delta\":{\"content\":\"{"));
+    }
+
+    #[test]
+    fn arbitrary_json_content_is_not_promoted_without_an_allowed_tool() {
+        let allowed = BTreeSet::from(["run_terminal".to_owned()]);
+        let content = r#"{"name":"list_knowledge_bases","arguments":{"count":5}}"#;
+        assert!(parse_legacy_tool_call(content, &allowed).is_none());
+    }
+
+    #[test]
+    fn architecture_question_is_answered_without_tools() {
+        let request = ChatCompletionsConverter::parse_request(&json!({
+            "model": PRIMARY_PUBLIC_MODEL_ID,
+            "messages": [{
+                "role": "user",
+                "content": "Be specific: what are your models capable of, how do you route to different models, and what does your stack look like?"
+            }],
+            "tools": [{
+                "type": "function",
+                "function": {"name": "list_knowledge_bases", "parameters": {"type": "object"}}
+            }]
+        }))
+        .unwrap();
+        assert!(is_self_capability_inquiry(&request));
+
+        let concise = ChatCompletionsConverter::parse_request(&json!({
+            "model": PRIMARY_PUBLIC_MODEL_ID,
+            "messages": [{"role": "user", "content": "Explain your model routing and stack."}]
+        }))
+        .unwrap();
+        assert!(is_self_capability_inquiry(&concise));
+    }
+
+    #[test]
+    fn repeated_identical_tool_calls_activate_circuit_breaker() {
+        let request = ChatCompletionsConverter::parse_request(&json!({
+            "model": PRIMARY_PUBLIC_MODEL_ID,
+            "messages": [
+                {"role": "user", "content": "Find the relevant internal material."},
+                {"role": "assistant", "content": null, "tool_calls": [{
+                    "id": "call_1", "type": "function",
+                    "function": {"name": "list_knowledge_bases", "arguments": "{\"count\":5}"}
+                }]},
+                {"role": "tool", "tool_call_id": "call_1", "content": "[]"},
+                {"role": "assistant", "content": null, "tool_calls": [{
+                    "id": "call_2", "type": "function",
+                    "function": {"name": "list_knowledge_bases", "arguments": "{ \"count\" : 5 }"}
+                }]},
+                {"role": "tool", "tool_call_id": "call_2", "content": "[]"}
+            ]
+        }))
+        .unwrap();
+        assert!(has_repeated_tool_loop(&request));
+    }
+
+    #[test]
+    fn distinct_tool_progress_does_not_activate_circuit_breaker() {
+        let request = ChatCompletionsConverter::parse_request(&json!({
+            "model": PRIMARY_PUBLIC_MODEL_ID,
+            "messages": [
+                {"role": "user", "content": "Compare these sources."},
+                {"role": "assistant", "content": null, "tool_calls": [{
+                    "id": "call_1", "type": "function",
+                    "function": {"name": "search", "arguments": "{\"q\":\"one\"}"}
+                }]},
+                {"role": "tool", "tool_call_id": "call_1", "content": "first"},
+                {"role": "assistant", "content": null, "tool_calls": [{
+                    "id": "call_2", "type": "function",
+                    "function": {"name": "search", "arguments": "{\"q\":\"two\"}"}
+                }]},
+                {"role": "tool", "tool_call_id": "call_2", "content": "second"}
+            ]
+        }))
+        .unwrap();
+        assert!(!has_repeated_tool_loop(&request));
+    }
+
     #[tokio::test]
     async fn high_risk_output_is_withheld_without_independent_evidence() {
         let mut configured = state("http://127.0.0.1:1".into());
@@ -1963,7 +2466,7 @@ mod tests {
         let mut request = authenticated_request(
             "POST",
             "/v1/responses",
-            Body::from(r#"{"model":"noerelay/epr-1","input":"deploy this"}"#),
+            Body::from(r#"{"model":"axiovex-agni","input":"deploy this"}"#),
         );
         request
             .headers_mut()
@@ -1989,7 +2492,7 @@ mod tests {
         let mut request = authenticated_request(
             "POST",
             "/v1/responses",
-            Body::from(r#"{"model":"noerelay/epr-1","input":"report this"}"#),
+            Body::from(r#"{"model":"axiovex-agni","input":"report this"}"#),
         );
         request
             .headers_mut()

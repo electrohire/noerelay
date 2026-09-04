@@ -24,7 +24,7 @@
     },
     {
       "cycle": 1,
-      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "action": "Restart Remote GPU network endpoint on the remote GPU",
       "timestamp": "2026-09-03T15:41:46.482677+00:00"
     }
   ],

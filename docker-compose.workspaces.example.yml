@@ -1,0 +1,8 @@
+# Copy this file to an ignored local override and add only directories that
+# agents are authorized to modify. Docker Desktop accepts C:/... source paths.
+services:
+  open-terminal:
+    volumes:
+      - type: bind
+        source: /absolute/path/to/another/project
+        target: /workspaces/another-project

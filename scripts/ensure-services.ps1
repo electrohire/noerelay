@@ -1,7 +1,7 @@
 # NoeRelay Service Orchestration — Ensure All Services on All Machines
 # =============================================================================
 # This script probes, starts, and health-checks every service in the NoeRelay
-# deployment topology across all machines (localhost, Docker, layer1labs remote).
+# deployment topology across localhost, Docker, and the remote GPU.
 #
 # Usage:
 #   .\scripts\ensure-services.ps1                  # Check + start all services
@@ -20,11 +20,15 @@ param(
     [switch]$Continuous,
     [int]$ContinuousIntervalSeconds = 60,
     [int]$TimeoutSeconds = 10,
-    [string]$DockerComposeDir = $PSScriptRoot + "\.."
+    [string]$DockerComposeDir = $PSScriptRoot + "\..",
+    [string]$RemoteGpuHost = $env:REMOTE_GPU_HOST
 )
 
 $ErrorActionPreference = "Continue"
 $script:StartTime = Get-Date
+if ([string]::IsNullOrWhiteSpace($RemoteGpuHost)) {
+    $RemoteGpuHost = "remote-gpu.example.internal"
+}
 
 # ---------------------------------------------------------------------------
 # Output helpers
@@ -229,34 +233,34 @@ $Services = @(
         VerifyCommand = { Test-DockerContainer "noerelay-postgres-1" }
     },
 
-    # --- Remote: layer1labs ---
+    # --- Remote GPU ---
     @{
-        Name = "Layer1Labs Host"
-        Machine = "layer1labs"
+        Name = "Remote GPU"
+        Machine = "remote-gpu"
         Kind = "remote"
-        Host = "192.168.50.41"
+        Host = $RemoteGpuHost
         Port = 22
         HealthUrl = $null
         IsWindowsService = $false
         StartCommand = $null
-        VerifyCommand = { Test-RemoteHost "192.168.50.41" }
+        VerifyCommand = { Test-RemoteHost $RemoteGpuHost }
     },
     @{
-        Name = "Layer1Labs SSH Tunnel"
-        Machine = "layer1labs"
+        Name = "Remote GPU SSH Tunnel"
+        Machine = "remote-gpu"
         Kind = "remote"
         Host = "127.0.0.1"
         Port = 4000
         HealthUrl = "http://127.0.0.1:4000/health"
         IsWindowsService = $false
         StartCommand = {
-            ssh -f -N -L 4000:127.0.0.1:4000 actor@192.168.50.41
+            ssh -f -N -L 4000:127.0.0.1:4000 "actor@$RemoteGpuHost"
         }
         VerifyCommand = { Test-SshTunnel 4000 }
     },
     @{
-        Name = "Layer1Labs vLLM"
-        Machine = "layer1labs"
+        Name = "Remote GPU inference endpoint"
+        Machine = "remote-gpu"
         Kind = "inference"
         Host = "127.0.0.1"
         Port = 4000
@@ -266,15 +270,15 @@ $Services = @(
         VerifyCommand = { Test-TcpPort "127.0.0.1" 4000 }
     },
     @{
-        Name = "Layer1Labs Tailscale"
-        Machine = "layer1labs"
+        Name = "Remote GPU network endpoint"
+        Machine = "remote-gpu"
         Kind = "remote"
-        Host = "layer1labs.tail8508ce.ts.net"
+        Host = $RemoteGpuHost
         Port = 4000
-        HealthUrl = "https://layer1labs.tail8508ce.ts.net:4000/health"
+        HealthUrl = "https://${RemoteGpuHost}:4000/health"
         IsWindowsService = $false
         StartCommand = $null
-        VerifyCommand = { Test-RemoteHost "layer1labs.tail8508ce.ts.net" }
+        VerifyCommand = { Test-RemoteHost $RemoteGpuHost }
     }
 )
 
@@ -345,7 +349,7 @@ function Ensure-AllServices {
 
     foreach ($svc in $Services) {
         # Skip filters
-        if (-not $IncludeRemote -and $svc.Machine -eq "layer1labs") { continue }
+        if (-not $IncludeRemote -and $svc.Machine -eq "remote-gpu") { continue }
         if (-not $IncludeDocker -and $svc.Kind -eq "docker") { continue }
 
         $name = $svc.Name

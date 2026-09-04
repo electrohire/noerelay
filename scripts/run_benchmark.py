@@ -31,7 +31,7 @@ def main() -> int:
     parser.add_argument("--cohort", default="default", help="Cohort name")
     parser.add_argument("--evaluator", default="exact_match", help="Evaluator name")
     parser.add_argument("--harness", default=None, help="Official harness name")
-    parser.add_argument("--model", default="noerelay/epr-1", help="Model ID")
+    parser.add_argument("--model", default="axiovex-agni", help="Model ID")
     parser.add_argument(
         "--prefer-local",
         action="store_true",

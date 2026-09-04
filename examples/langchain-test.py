@@ -15,7 +15,7 @@ Usage:
 Environment variables:
     NOERELAY_BASE_URL    — NoeRelay API base URL (default: http://127.0.0.1:8080/v1)
     NOERELAY_API_KEY     — NoeRelay API key (default: any-value)
-    NOERELAY_MODEL       — Model ID to use (default: noerelay/epr-1)
+    NOERELAY_MODEL       — Model ID to use (default: axiovex-agni)
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ def get_config():
     return {
         "base_url": os.environ.get("NOERELAY_BASE_URL", "http://127.0.0.1:8080/v1"),
         "api_key": os.environ.get("NOERELAY_API_KEY", "any-value"),
-        "model": os.environ.get("NOERELAY_MODEL", "noerelay/epr-1"),
+        "model": os.environ.get("NOERELAY_MODEL", "axiovex-agni"),
     }
 
 

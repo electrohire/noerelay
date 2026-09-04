@@ -210,7 +210,7 @@ class ContinuousBenchmarkPipeline:
         gateway_url: str = "http://127.0.0.1:8080",
         output_dir: Path | str | None = None,
         baseline_dir: Path | str | None = None,
-        model: str = "noerelay/epr-1",
+        model: str = "axiovex-agni",
         include_livebench: bool = False,
         include_hf: bool = False,
     ) -> None:
@@ -462,7 +462,7 @@ def main() -> int:
         help="Gateway base URL",
     )
     parser.add_argument(
-        "--model", default="noerelay/epr-1", help="Model ID to benchmark",
+        "--model", default="axiovex-agni", help="Model ID to benchmark",
     )
     parser.add_argument(
         "--once", action="store_true", help="Run once and exit",

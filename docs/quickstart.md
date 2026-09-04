@@ -18,7 +18,7 @@ Verify readiness and send an ordinary OpenAI-compatible request:
 $headers = @{ Authorization = "Bearer $env:NOERELAY_API_KEY"; "Content-Type" = "application/json" }
 Invoke-RestMethod http://127.0.0.1:8080/ready
 $response = Invoke-WebRequest -Method Post http://127.0.0.1:8080/v1/responses `
-  -Headers $headers -Body '{"model":"noerelay/epr-1","input":"What is 2+2?"}'
+  -Headers $headers -Body '{"model":"axiovex-agni","input":"What is 2+2?"}'
 $response.Headers["x-noerelay-run-id"]
 $response.Headers["x-noerelay-receipt-hash"]
 ```

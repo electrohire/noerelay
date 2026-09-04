@@ -29,7 +29,8 @@ Together, **NoeRelay** means an epistemically governed relay for AI work.
 
 - **NoeRelay** is the application and stable virtual-model identity.
 - **EPR-1** is the normative runtime architecture and interoperability contract.
-- Recommended API model ID: `noerelay/epr-1`.
+- Governed API model ID: `axiovex-agni`; independent local Sentinel maintenance model: `axiovex-agni-recovery`.
+- Release identifiers follow the [AXIOVEX model naming policy](docs/MODEL_NAMING.md).
 
 ## Why this exists
 
@@ -105,7 +106,7 @@ The draft [OpenAPI 3.1 specification](spec/openapi.json) defines the stable comp
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /v1/models` | Lists the stable `noerelay/epr-1` virtual model. |
+| `GET /v1/models` | Lists the stable Agni primary and isolated recovery models. |
 | `POST /v1/chat/completions` | OpenAI-compatible chat completions with optional governance metadata. |
 | `POST /v1/responses` | OpenAI Responses-compatible execution with optional governance metadata. |
 | `GET /v1/noerelay/runs/{run_id}/receipt` | Retrieves the signed evidence receipt for an accepted run. |
@@ -125,7 +126,7 @@ curl "$NOERELAY_BASE_URL/v1/responses" \
   -H "Authorization: Bearer $NOERELAY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "noerelay/epr-1",
+    "model": "axiovex-agni",
     "input": "Implement and verify the requested change.",
     "governance": {
       "project_id": "example-project",

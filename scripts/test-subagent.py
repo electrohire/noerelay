@@ -46,7 +46,7 @@ def check_gateway(url: str) -> dict:
     # Chat completion test
     try:
         data = json.dumps({
-            "model": "noerelay/epr-1",
+            "model": "axiovex-agni",
             "messages": [{"role": "user", "content": "Say hello in one word."}],
             "max_tokens": 50
         }).encode()

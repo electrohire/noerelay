@@ -67,7 +67,7 @@ async fn json_body(response: axum::response::Response) -> Value {
 }
 
 fn basic_request() -> Value {
-    json!({"model":"noerelay/epr-1","messages":[{"role":"user","content":"hello"}]})
+    json!({"model":"axiovex-agni","messages":[{"role":"user","content":"hello"}]})
 }
 
 #[tokio::test]
@@ -124,7 +124,7 @@ async fn tools_produce_function_call() {
         .oneshot(request(
             "/v1/chat/completions",
             json!({
-                "model":"noerelay/epr-1",
+                "model":"axiovex-agni",
                 "messages":[{"role":"user","content":"weather"}],
                 "tools":[{"type":"function","function":{"name":"weather","description":"lookup","parameters":{"type":"object"}}}],
                 "tool_choice": "required"
@@ -147,7 +147,7 @@ async fn tools_with_auto_choice_returns_text() {
         .oneshot(request(
             "/v1/chat/completions",
             json!({
-                "model":"noerelay/epr-1",
+                "model":"axiovex-agni",
                 "messages":[{"role":"user","content":"hello"}],
                 "tools":[{"type":"function","function":{"name":"weather","description":"lookup","parameters":{"type":"object"}}}]
             }),
@@ -166,7 +166,7 @@ async fn json_object_response_is_valid_json_text() {
         .oneshot(request(
             "/v1/chat/completions",
             json!({
-                "model":"noerelay/epr-1",
+                "model":"axiovex-agni",
                 "messages":[{"role":"user","content":"json"}],
                 "response_format":{"type":"json_object"}
             }),
@@ -210,7 +210,7 @@ async fn multi_turn_conversation_is_accepted() {
         .oneshot(request(
             "/v1/chat/completions",
             json!({
-                "model":"noerelay/epr-1",
+                "model":"axiovex-agni",
                 "messages":[
                     {"role":"system","content":"be concise"},
                     {"role":"user","content":"first"},
@@ -230,7 +230,7 @@ async fn vision_image_url_is_accepted() {
         .oneshot(request(
             "/v1/chat/completions",
             json!({
-                "model":"noerelay/epr-1",
+                "model":"axiovex-agni",
                 "messages":[{"role":"user","content":[
                     {"type":"text","text":"describe"},
                     {"type":"image_url","image_url":{"url":"data:image/png;base64,AA==","detail":"low"}}
@@ -262,7 +262,7 @@ async fn responses_endpoint_uses_responses_shape() {
     let response = application()
         .oneshot(request(
             "/v1/responses",
-            json!({"model":"noerelay/epr-1","input":"hello"}),
+            json!({"model":"axiovex-agni","input":"hello"}),
         ))
         .await
         .unwrap();
@@ -277,7 +277,7 @@ async fn missing_messages_is_invalid_request() {
     let response = application()
         .oneshot(request(
             "/v1/chat/completions",
-            json!({"model":"noerelay/epr-1"}),
+            json!({"model":"axiovex-agni"}),
         ))
         .await
         .unwrap();
@@ -294,7 +294,7 @@ async fn max_tokens_limits_stub_output() {
         .oneshot(request(
             "/v1/chat/completions",
             json!({
-                "model":"noerelay/epr-1",
+                "model":"axiovex-agni",
                 "messages":[{"role":"user","content":"hello"}],
                 "max_tokens": 1
             }),

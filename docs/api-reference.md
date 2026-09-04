@@ -36,7 +36,7 @@ Chat completions endpoint (OpenAI-compatible).
 **Request:**
 ```json
 {
-  "model": "noerelay/epr-1",
+  "model": "axiovex-agni",
   "messages": [
     {"role": "user", "content": "Hello"}
   ],
@@ -53,7 +53,7 @@ Chat completions endpoint (OpenAI-compatible).
 {
   "id": "chatcmpl-...",
   "object": "chat.completion",
-  "model": "noerelay/epr-1",
+  "model": "axiovex-agni",
   "choices": [{
     "index": 0,
     "message": {
@@ -89,7 +89,7 @@ OpenAI Responses API endpoint.
 **Request:**
 ```json
 {
-  "model": "noerelay/epr-1",
+  "model": "axiovex-agni",
   "input": "What is the capital of France?",
   "instructions": "Answer concisely.",
   "governance": {"risk_class": "low"},
@@ -102,7 +102,7 @@ OpenAI Responses API endpoint.
 {
   "id": "resp_...",
   "object": "response",
-  "model": "noerelay/epr-1",
+  "model": "axiovex-agni",
   "output": [{
     "type": "message",
     "role": "assistant",
@@ -126,7 +126,7 @@ List available models (OpenAI-compatible).
 {
   "object": "list",
   "data": [
-    {"id": "noerelay/epr-1", "object": "model", "owned_by": "noerelay"}
+    {"id": "axiovex-agni", "object": "model", "owned_by": "axiovex"}
   ]
 }
 ```

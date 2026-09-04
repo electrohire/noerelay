@@ -24,7 +24,7 @@ it to NoeRelay:
    - Set **API Key**: (any value if auth is disabled, or your NoeRelay API key)
    - Click **"Test Connection"**
 
-3. The model `noerelay/epr-1` will appear in the model dropdown.
+3. `axiovex-agni` and the independent local `axiovex-agni-recovery` model appear in the dropdown.
 
 4. All requests through Open WebUI will be routed through NoeRelay's governance
    pipeline:
@@ -55,7 +55,7 @@ Zoo-Code uses OpenRouter for model routing. To use NoeRelay as the routing layer
        "fast": {
          "base_url": "http://127.0.0.1:8080/v1",
          "api_key": "your-noerelay-api-key",
-         "model": "noerelay/epr-1"
+         "model": "axiovex-agni"
        }
      }
    }
@@ -79,13 +79,13 @@ For any client that supports custom OpenAI endpoints:
 - **Base URL**: `http://127.0.0.1:8080/v1`
 - **API Key**: Your NoeRelay API key (create one via `POST /v1/api-keys` or use any
   value if auth is disabled)
-- **Model**: `noerelay/epr-1`
+- **Model**: `axiovex-agni`
 - **Streaming**: Supported (`stream: true` returns SSE)
 - **Governance**: Add a `governance` object to the request body:
 
   ```json
   {
-    "model": "noerelay/epr-1",
+    "model": "axiovex-agni",
     "messages": [
       {"role": "user", "content": "Write a function to sort a list"}
     ],
@@ -108,7 +108,7 @@ import json
 
 url = "http://127.0.0.1:8080/v1/chat/completions"
 data = json.dumps({
-    "model": "noerelay/epr-1",
+    "model": "axiovex-agni",
     "messages": [{"role": "user", "content": "Hello"}],
     "governance": {"risk_class": "low"}
 }).encode()
@@ -133,7 +133,7 @@ curl -X POST http://127.0.0.1:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-api-key" \
   -d '{
-    "model": "noerelay/epr-1",
+    "model": "axiovex-agni",
     "messages": [{"role": "user", "content": "What is 2+2?"}],
     "governance": {"risk_class": "low", "data_policy": "zdr"}
   }'
@@ -151,7 +151,7 @@ from langchain_openai import ChatOpenAI
 llm = ChatOpenAI(
     base_url="http://127.0.0.1:8080/v1",
     api_key=os.environ.get("NOERELAY_API_KEY", "any-value"),
-    model="noerelay/epr-1",
+    model="axiovex-agni",
 )
 
 response = llm.invoke("Hello!")
@@ -172,7 +172,7 @@ from llama_index.llms.openai import OpenAI
 llm = OpenAI(
     api_base="http://127.0.0.1:8080/v1",
     api_key=os.environ.get("NOERELAY_API_KEY", "any-value"),
-    model="noerelay/epr-1",
+    model="axiovex-agni",
 )
 
 response = llm.complete("What is 2+2?")
@@ -281,7 +281,7 @@ NoeRelay-specific metadata:
   "id": "chatcmpl-abc123",
   "object": "chat.completion",
   "created": 1700000000,
-  "model": "noerelay/epr-1",
+  "model": "axiovex-agni",
   "choices": [
     {
       "index": 0,
