@@ -581,7 +581,7 @@ class BenchmarkDatasetTests(unittest.TestCase):
         path = ROOT / "benchmarks" / "coding-tasks.jsonl"
         self.assertTrue(path.exists(), f"Missing {path}")
         cases = self._load_jsonl(path)
-        self.assertEqual(len(cases), 5)
+        self.assertEqual(len(cases), 15)
         for case in cases:
             self.assertIn("id", case)
             self.assertIn("input", case)
@@ -593,7 +593,7 @@ class BenchmarkDatasetTests(unittest.TestCase):
         path = ROOT / "benchmarks" / "reasoning-tasks.jsonl"
         self.assertTrue(path.exists(), f"Missing {path}")
         cases = self._load_jsonl(path)
-        self.assertEqual(len(cases), 5)
+        self.assertEqual(len(cases), 15)
         for case in cases:
             self.assertIn("id", case)
             self.assertTrue(case["id"].startswith("reason-"))
@@ -602,7 +602,7 @@ class BenchmarkDatasetTests(unittest.TestCase):
         path = ROOT / "benchmarks" / "multi-turn-tasks.jsonl"
         self.assertTrue(path.exists(), f"Missing {path}")
         cases = self._load_jsonl(path)
-        self.assertEqual(len(cases), 3)
+        self.assertEqual(len(cases), 10)
         for case in cases:
             self.assertIn("id", case)
             self.assertTrue(case["id"].startswith("mt-"))

@@ -37,7 +37,7 @@ init_env() {
     printf 'REMOTE_GPU_VLLM_HOST=127.0.0.1\nREMOTE_GPU_VLLM_PORT=4000\n'
     printf 'REMOTE_GPU_MODEL=local-model\nREMOTE_GPU_API_KEY=no-key\n'
     printf 'OPENROUTER_API_KEY=\n'
-    printf 'NOERELAY_PORT=8080\nNOERELAY_A2A_PORT=8090\nNOERELAY_WEBUI_PORT=3000\n'
+    printf 'NOERELAY_PORT=8080\nNOERELAY_A2A_PORT=8090\nNOERELAY_WEBUI_PORT=3000\nNOERELAY_RECOVERY_PORT=4002\n'
     printf 'NOERELAY_WEBUI_ENABLE_SIGNUP=false\n'
     printf 'NOERELAY_WORKSPACE_PATH=%s\n' "${repo_dir}"
     printf 'NOERELAY_SETTINGS_PATH=%s/.noerelay-settings\n' "${repo_dir}"

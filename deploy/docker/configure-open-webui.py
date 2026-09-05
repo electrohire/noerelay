@@ -43,47 +43,100 @@ request(
     "/openai/config/update",
     {
         "ENABLE_OPENAI_API": True,
-        "OPENAI_API_BASE_URLS": ["http://noerelay:8080/v1"],
-        "OPENAI_API_KEYS": [os.environ["NOERELAY_API_KEY"]],
+        "OPENAI_API_BASE_URLS": [
+            "http://noerelay:8080/v1",
+            "http://recovery-proxy:4000/v1",
+        ],
+        "OPENAI_API_KEYS": [
+            os.environ["NOERELAY_API_KEY"],
+            os.environ["RECOVERY_PROXY_API_KEY"],
+        ],
         "OPENAI_API_CONFIGS": {
             "0": {
                 "enable": True,
                 "name": "NoeRelay",
                 "prefix_id": "",
                 "model_ids": ["axiovex-agni"],
-            }
-        },
-    },
-    token,
-)
-recovery_base_model = os.environ.get("NOERELAY_RECOVERY_LOCAL_MODEL", "qwen3.8:27b")
-request(
-    "/ollama/config/update",
-    {
-        "ENABLE_OLLAMA_API": True,
-        "OLLAMA_BASE_URLS": ["http://ollama:11434"],
-        "OLLAMA_API_CONFIGS": {
-            "0": {
+            },
+            "1": {
                 "enable": True,
                 "name": "Local Recovery",
                 "prefix_id": "",
-                "model_ids": [recovery_base_model],
-            }
+                "model_ids": ["axiovex-agni-recovery"],
+            },
         },
     },
     token,
 )
+recovery_source_model = os.environ.get("NOERELAY_RECOVERY_LOCAL_MODEL", "qwen3.8:27b")
+recovery_public_model = "axiovex-agni-recovery"
+request(
+    "/ollama/config/update",
+    {"ENABLE_OLLAMA_API": False, "OLLAMA_BASE_URLS": [], "OLLAMA_API_CONFIGS": {}},
+    token,
+)
+
+# The recovery model bypasses NoeRelay's Rust circuit breaker, so install the
+# equivalent UI request guard for tool continuations. This hook runs before
+# each provider request, including Open WebUI's automatic tool follow-ups.
+recovery_guard_id = "axiovex_recovery_tool_guard"
+recovery_guard = r'''"""
+title: AXIOVEX Recovery Tool Guard
+version: 1.0.0
+"""
+import json
+
+class Filter:
+    async def request(self, body: dict) -> dict:
+        messages = body.get("messages") or []
+        last_user = max((i for i, m in enumerate(messages) if m.get("role") == "user"), default=-1)
+        signatures = []
+        for message in messages[last_user + 1:]:
+            for call in message.get("tool_calls") or []:
+                function = call.get("function") or {}
+                arguments = function.get("arguments", "{}")
+                try:
+                    arguments = json.dumps(json.loads(arguments), sort_keys=True, separators=(",", ":"))
+                except (TypeError, ValueError):
+                    arguments = str(arguments)
+                signatures.append((function.get("name", ""), arguments))
+        repeated = len(signatures) >= 2 and len(set(signatures)) < len(signatures)
+        if repeated or len(signatures) >= 8:
+            body.pop("tools", None)
+            body.pop("functions", None)
+            body["tool_choice"] = "none"
+            messages.append({
+                "role": "system",
+                "content": "Tool execution is complete or repeating. Do not call another tool. Answer the user now in clear Markdown using the tool results already present, and state any unresolved limitation. Never emit a serialized tool-call object as visible text.",
+            })
+        return body
+'''
+guard_form = {
+    "id": recovery_guard_id,
+    "name": "AXIOVEX Recovery Tool Guard",
+    "content": recovery_guard,
+    "meta": {"description": "Stops repeated local recovery tool calls and forces a readable final answer."},
+}
+guard_created = False
+try:
+    request("/api/v1/functions/create", guard_form, token)
+    guard_created = True
+except Exception:
+    request(f"/api/v1/functions/id/{recovery_guard_id}/update", guard_form, token)
+if guard_created:
+    request(f"/api/v1/functions/id/{recovery_guard_id}/toggle", {}, token)
 
 recovery_model = {
-    "id": "axiovex-agni-recovery",
-    "base_model_id": recovery_base_model,
+    "id": recovery_public_model,
+    "base_model_id": None,
     "name": "AXIOVEX Agni Recovery",
     "meta": {
         "description": (
-            "Independent local host-GPU recovery agent for maintaining AXIOVEX "
+            f"Independent local host-GPU recovery agent ({recovery_source_model}) for maintaining AXIOVEX "
             "components when NoeRelay or external providers are unavailable."
         ),
         "capabilities": {"vision": True, "usage": True},
+        "filterIds": [recovery_guard_id],
     },
     "params": {
         "function_calling": "native",

@@ -37,6 +37,21 @@ with `NOERELAY_RECOVERY_LOCAL_MODEL` without exposing its provider ID to clients
 This direct inference path does not claim NoeRelay governance receipts; the
 separation is intentional for bootstrap-independent maintenance.
 
+The same independent recovery route is available outside Sentinel at
+`http://127.0.0.1:${NOERELAY_RECOVERY_PORT:-4002}/v1`. It accepts the model ID
+`axiovex-agni-recovery` and the bearer token stored as `LITELLM_MASTER_KEY` in
+the host-only `.env.docker` file. It remains usable if the NoeRelay gateway is
+stopped.
+
+Normal local inference prefers NVIDIA Personal AI Router (PAIR) as the outer
+GPU-node router. Install PAIR on the Docker host, make
+`NOERELAY_PAIR_MODEL` available in PAIR, and set its OpenAI-compatible URL in
+`NOERELAY_PAIR_BASE_URL`. Docker reaches it through `host.docker.internal` on
+Windows and Linux. If PAIR is unavailable, the model plane falls back to its
+container-local model and then the configured external provider. Recovery
+intentionally bypasses PAIR as well as NoeRelay, preserving an independent
+repair path.
+
 The managed profile enables browser-sandboxed code execution, Open Terminal,
 DuckDuckGo web search with confirmation, hybrid document retrieval, Docling
 OCR for images and scanned PDFs, page-aware PDF loading/render extraction,

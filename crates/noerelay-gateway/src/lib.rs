@@ -1099,7 +1099,16 @@ fn parse_legacy_tool_call(
     content: &str,
     allowed_tool_names: &BTreeSet<String>,
 ) -> Option<(String, String)> {
+    if content.len() > 64 * 1024 {
+        return None;
+    }
     let mut candidate = content.trim();
+    if candidate.starts_with("<tool_call>") && candidate.ends_with("</tool_call>") {
+        candidate = candidate
+            .strip_prefix("<tool_call>")?
+            .strip_suffix("</tool_call>")?
+            .trim();
+    }
     if candidate.starts_with("```json") && candidate.ends_with("```") {
         candidate = candidate
             .strip_prefix("```json")?
@@ -1110,6 +1119,20 @@ fn parse_legacy_tool_call(
     }
     let value = serde_json::from_str::<Value>(candidate).ok()?;
     let object = value.as_object()?;
+    let object = if let Some(function) = object.get("function").and_then(Value::as_object) {
+        function
+    } else if let Some(call) = object
+        .get("tool_calls")
+        .and_then(Value::as_array)
+        .filter(|calls| calls.len() == 1)
+        .and_then(|calls| calls.first())
+        .and_then(|call| call.get("function"))
+        .and_then(Value::as_object)
+    {
+        call
+    } else {
+        object
+    };
     if object.keys().any(|key| key != "name" && key != "arguments") {
         return None;
     }
@@ -1766,7 +1789,7 @@ async fn release_response(
         .await
         .insert(prepared.run_id.clone(), receipt);
     // Build evaluator-contract result from verification checks
-    let evaluator_result = build_evaluator_result(&prepared, &results);
+    let evaluator_result = build_evaluator_result(prepared, &results);
     let evaluator_result_json =
         serde_json::to_string(&evaluator_result).unwrap_or_else(|_| "{}".into());
 
@@ -2389,6 +2412,25 @@ mod tests {
         let allowed = BTreeSet::from(["run_terminal".to_owned()]);
         let content = r#"{"name":"list_knowledge_bases","arguments":{"count":5}}"#;
         assert!(parse_legacy_tool_call(content, &allowed).is_none());
+    }
+
+    #[test]
+    fn wrapped_and_tagged_legacy_tool_calls_are_promoted() {
+        let allowed = BTreeSet::from(["run_terminal".to_owned()]);
+        let cases = [
+            r#"{"type":"function","function":{"name":"run_terminal","arguments":{"command":"cargo test"}}}"#,
+            r#"{"tool_calls":[{"type":"function","function":{"name":"run_terminal","arguments":"{\"command\":\"cargo test\"}"}}]}"#,
+            r#"<tool_call>{"name":"run_terminal","arguments":{"command":"cargo test"}}</tool_call>"#,
+            "```json\n{\"name\":\"run_terminal\",\"arguments\":{\"command\":\"cargo test\"}}\n```",
+        ];
+        for content in cases {
+            let (name, arguments) = parse_legacy_tool_call(content, &allowed).unwrap();
+            assert_eq!(name, "run_terminal");
+            assert_eq!(
+                serde_json::from_str::<Value>(&arguments).unwrap()["command"],
+                "cargo test"
+            );
+        }
     }
 
     #[test]

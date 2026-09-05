@@ -95,13 +95,36 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env.docker}
       LITELLM_LOCAL_MODEL: ollama/${NOERELAY_LOCAL_MODEL:-qwen3:8b}
       LITELLM_REMOTE_MODEL: openai/${REMOTE_GPU_MODEL:-local-model}
+      PAIR_MODEL: openai/${NOERELAY_PAIR_MODEL:-qwen3:8b}
+      PAIR_OPENAI_BASE_URL: ${NOERELAY_PAIR_BASE_URL:-http://host.docker.internal:11434/v1}
+      PAIR_API_KEY: ${NOERELAY_PAIR_API_KEY:-pair-local}
       REMOTE_GPU_API_KEY: ${REMOTE_GPU_API_KEY:-no-key}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     volumes: [./deploy/docker/litellm-config.yaml:/app/config.yaml:ro]
+    extra_hosts: ["host.docker.internal:host-gateway"]
     networks: [backend, model-plane, egress]
     depends_on:
       postgres: {condition: service_healthy}
       ollama: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  recovery-proxy:
+    image: ghcr.io/berriai/litellm:v1.99.1@sha256:a53a7d3ffebede1925bd3ee8a21e4a7b9b63e2e68ec883af136edcccb6eeb82c
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    ports: ["${NOERELAY_RECOVERY_PORT:-4002}:4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env.docker}
+      RECOVERY_LOCAL_MODEL: ollama/${NOERELAY_RECOVERY_LOCAL_MODEL:-qwen3.8:27b}
+    volumes: [./deploy/docker/recovery-litellm-config.yaml:/app/config.yaml:ro]
+    networks: [frontend, model-plane]
+    depends_on:
+      ollama-recovery-init: {condition: service_completed_successfully}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3)\""]
       interval: 10s
@@ -182,9 +205,7 @@ services:
       PASSWORD_VALIDATION_HINT: At least 12 characters with upper/lowercase, number, and symbol.
       DEFAULT_MODELS: axiovex-agni
       DEFAULT_PINNED_MODELS: axiovex-agni,axiovex-agni-recovery
-      ENABLE_OLLAMA_API: "true"
-      OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_BASE_URLS: http://ollama:11434
+      ENABLE_OLLAMA_API: "false"
       ENABLE_WEB_SEARCH: "true"
       WEB_SEARCH_ENGINE: duckduckgo
       WEB_SEARCH_RESULT_COUNT: "5"
@@ -299,6 +320,7 @@ services:
       WEBUI_ADMIN_EMAIL: ${WEBUI_ADMIN_EMAIL:-admin@noerelay.local}
       WEBUI_ADMIN_PASSWORD: ${WEBUI_ADMIN_PASSWORD:?set WEBUI_ADMIN_PASSWORD in .env.docker}
       NOERELAY_API_KEY: ${NOERELAY_API_KEY:?set NOERELAY_API_KEY in .env.docker}
+      RECOVERY_PROXY_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env.docker}
       OPEN_TERMINAL_API_KEY: ${OPEN_TERMINAL_API_KEY:?set OPEN_TERMINAL_API_KEY in .env.docker}
     volumes:
       - ./deploy/docker/configure-open-webui.py:/bootstrap/configure-open-webui.py:ro
@@ -306,7 +328,7 @@ services:
     depends_on:
       open-webui: {condition: service_healthy}
       open-terminal: {condition: service_healthy}
-      ollama-recovery-init: {condition: service_completed_successfully}
+      recovery-proxy: {condition: service_healthy}
     restart: "no"
 
 networks:
