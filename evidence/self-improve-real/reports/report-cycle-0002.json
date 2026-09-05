@@ -98,8 +98,8 @@
     {
       "action_id": "action-0009",
       "category": "restart_service",
-      "description": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
-      "target": "Layer1Labs vLLM (SSH tunnel)",
+      "description": "Restart Remote GPU inference endpoint on the remote GPU",
+      "target": "Remote GPU inference endpoint",
       "current_state": "unhealthy",
       "proposed_state": "healthy",
       "expected_impact": {
@@ -112,8 +112,8 @@
     {
       "action_id": "action-0010",
       "category": "restart_service",
-      "description": "Restart Layer1Labs Tailscale on layer1labs",
-      "target": "Layer1Labs Tailscale",
+      "description": "Restart Remote GPU network endpoint on the remote GPU",
+      "target": "Remote GPU network endpoint",
       "current_state": "unhealthy",
       "proposed_state": "healthy",
       "expected_impact": {
@@ -134,5 +134,5 @@
       "efficiency": 10000.0
     }
   ],
-  "summary": "Cycle 2: score=1.0000 (delta=+0.0000), convergence=84%\nBottlenecks: 0 critical, 0 warnings\nRecommended actions: 5\n  - Enable cloud fallback for math-2 — no local model meets accuracy threshold\n  - Restart LiteLLM Proxy on localhost\n  - Restart PostgreSQL on localhost\n  - Restart Layer1Labs vLLM (SSH tunnel) on layer1labs\n  - Restart Layer1Labs Tailscale on layer1labs"
+  "summary": "Cycle 2: score=1.0000 (delta=+0.0000), convergence=84%\nBottlenecks: 0 critical, 0 warnings\nRecommended actions: 5\n  - Enable cloud fallback for math-2 — no local model meets accuracy threshold\n  - Restart LiteLLM Proxy on localhost\n  - Restart PostgreSQL on localhost\n  - Restart Remote GPU inference endpoint on the remote GPU\n  - Restart Remote GPU network endpoint on the remote GPU"
 }

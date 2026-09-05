@@ -66,8 +66,8 @@
     {
       "action_id": "action-0020",
       "category": "restart_service",
-      "description": "Restart Layer1Labs Tailscale on layer1labs",
-      "target": "Layer1Labs Tailscale",
+      "description": "Restart Remote GPU network endpoint on the remote GPU",
+      "target": "Remote GPU network endpoint",
       "current_state": "unhealthy",
       "proposed_state": "healthy",
       "expected_impact": {
@@ -88,5 +88,5 @@
       "efficiency": 10000.0
     }
   ],
-  "summary": "Cycle 4: score=0.9125 (delta=-0.0255), convergence=68%\nBottlenecks: 0 critical, 3 warnings\nRecommended actions: 3\n  - Enable cloud fallback for reason-9 — no local model meets accuracy threshold\n  - Restart PostgreSQL on localhost\n  - Restart Layer1Labs Tailscale on layer1labs"
+  "summary": "Cycle 4: score=0.9125 (delta=-0.0255), convergence=68%\nBottlenecks: 0 critical, 3 warnings\nRecommended actions: 3\n  - Enable cloud fallback for reason-9 — no local model meets accuracy threshold\n  - Restart PostgreSQL on localhost\n  - Restart Remote GPU network endpoint on the remote GPU"
 }

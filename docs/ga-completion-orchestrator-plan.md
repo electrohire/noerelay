@@ -1004,7 +1004,7 @@ At the start of the relevant package and again at release-candidate freeze, the 
 - OpenRouter model/provider plane: [model API](https://openrouter.ai/docs/api/api-reference/models/get-models), [streaming](https://openrouter.ai/docs/api/reference/streaming), [tool calling](https://openrouter.ai/docs/guides/features/tool-calling), and [provider selection](https://openrouter.ai/docs/guides/routing/provider-selection).
 - A2A interoperability: [A2A specification](https://a2a-protocol.org/latest/specification/), [official Go SDK](https://github.com/a2aproject/a2a-go), and [A2A TCK](https://github.com/a2aproject/a2a-tck).
 - MCP host/client/server and authorization: [MCP architecture](https://modelcontextprotocol.io/specification/2025-11-25/architecture), [transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), and [authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization).
-- Specification governance inspiration: [Layer1Labs SpecSmith](https://github.com/layer1labs/specsmith). NoeRelay implements its own Rust-authoritative requirement/test/evidence semantics rather than importing trust from another tool.
+- Specification governance inspiration: the SpecSmith methodology. NoeRelay implements its own Rust-authoritative requirement/test/evidence semantics rather than importing trust from another tool.
 - Provenance and attestations: [W3C PROV](https://www.w3.org/TR/prov-primer/) and [in-toto specification](https://github.com/in-toto/docs/blob/master/in-toto-spec.md).
 
 If an external protocol changes, update the compatibility/interop profile through an immutable revision and rerun dependent gates. Do not silently track “latest” in production.

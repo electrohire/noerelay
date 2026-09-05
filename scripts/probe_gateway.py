@@ -11,7 +11,7 @@ KEY = "noerelay-local-development-key-0001"
 
 def probe():
     body = json.dumps({
-        "model": "noerelay/epr-1",
+        "model": "axiovex-agni",
         "messages": [{"role": "user", "content": "What is 2+2? Answer with just the number."}],
     }).encode()
     req = urllib.request.Request(

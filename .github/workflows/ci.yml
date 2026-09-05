@@ -1,5 +1,12 @@
 name: CI
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, develop]
@@ -26,7 +33,7 @@ jobs:
     env:
       NOERELAY_TEST_DATABASE_URL: postgresql://noerelay:noerelay-ci-password@127.0.0.1:5432/noerelay_test
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Install Rust stable
       run: |
@@ -58,10 +65,10 @@ jobs:
       run:
         working-directory: services/a2a-adapter
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: services/a2a-adapter/go.mod
         cache-dependency-path: services/a2a-adapter/go.sum
@@ -87,10 +94,10 @@ jobs:
         python-version: ['3.11', '3.12']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -110,10 +117,9 @@ jobs:
   docker:
     needs: [test, rust, go-a2a]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Build Docker image
       run: docker build -t noerelay:latest .
@@ -137,7 +143,7 @@ jobs:
         curl --fail --silent -X POST \
           -H 'Authorization: Bearer ci-test-key-that-is-at-least-32-characters' \
           -H 'Content-Type: application/json' \
-          -d '{"model":"noerelay/epr-1","messages":[{"role":"user","content":"Hello"}]}' \
+          -d '{"model":"axiovex-agni","messages":[{"role":"user","content":"Hello"}]}' \
           http://127.0.0.1:8080/v1/chat/completions
         docker stop noerelay-test
         docker rm noerelay-test

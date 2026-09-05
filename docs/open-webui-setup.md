@@ -1,130 +1,105 @@
-# Open WebUI setup for NoeRelay
+# AXIOVEX Sentinel interface
 
-**NoeRelay version:** `0.1.0-draft`
-**Last updated:** 2026-08-20
+**AXIOVEX Sentinel** is the enterprise-facing interface. **NoeRelay** is the
+Intelligent AI Control Plane that selects and governs models underneath it.
+Copyright © 2026 AXIOVEX Systems Inc. All rights reserved.
 
-Open WebUI can use NoeRelay as a custom OpenAI-wire-compatible backend. “OpenAI-compatible” refers only to the client protocol: NoeRelay routes through explicitly permitted non-OpenAI models via OpenRouter or local Ollama and rejects OpenAI model families.
+Open WebUI, Open Terminal, and the local Docling OCR/PDF service are part of the
+primary GPU-enabled Compose stack.
+Open WebUI sends ordinary work only to the Rust NoeRelay OpenAI-compatible
+endpoint. Its explicitly named recovery model is the sole exception: it calls
+the private local Ollama service directly so it remains available when NoeRelay
+or an external provider is broken.
 
-## Prerequisites
-
-- Docker Engine and Docker Compose v2
-- This repository
-- Optional: `OPENROUTER_API_KEY` for live cloud inference
-- Optional: enough disk and memory for an Ollama model
-
-## Docker Compose quick start
-
-Choose local secrets before shared use. The literal defaults below are development-only:
+Start the stack on Linux:
 
 ```bash
-export NOERELAY_API_KEY="replace-with-a-random-key"
-export NOERELAY_MASTER_KEY="replace-with-a-separate-random-key"
-export WEBUI_SECRET_KEY="replace-with-a-random-session-key"
-docker compose -f docker-compose.yml -f docker-compose.openwebui.yml up --build -d
+bash scripts/linux-stack.sh init
+bash scripts/linux-stack.sh up
 ```
 
-PowerShell:
-
-```powershell
-$env:NOERELAY_API_KEY = "replace-with-a-random-key"
-$env:NOERELAY_MASTER_KEY = "replace-with-a-separate-random-key"
-$env:WEBUI_SECRET_KEY = "replace-with-a-random-session-key"
-docker compose -f docker-compose.yml -f docker-compose.openwebui.yml up --build -d
-```
-
-Compose places both containers on its default network. Open WebUI connects internally to `http://noerelay:8080/v1` and uses the same `NOERELAY_API_KEY` passed to the gateway.
-
-Verify the services:
+Open `http://127.0.0.1:${NOERELAY_WEBUI_PORT}` (port `3000` by default).
+This workstation uses `3001` because another local process owns port `3000`.
+The initial email is `admin@noerelay.local`. Retrieve the generated password
+from the ignored host-only file:
 
 ```bash
-curl http://localhost:8080/health
-curl -H "Authorization: Bearer $NOERELAY_API_KEY" http://localhost:8080/v1/models
-curl http://localhost:3000
+grep '^WEBUI_ADMIN_PASSWORD=' .env.docker
 ```
 
-Open [http://localhost:3000](http://localhost:3000), create the initial administrator, select `noerelay/epr-1`, and send a message. Disable `ENABLE_SIGNUP` after the initial account is created when the deployment is not a disposable local environment.
+Public signup is disabled. The one-shot `open-webui-init` service idempotently
+replaces persisted provider settings with exactly two public models:
+`axiovex-agni` plus the independent local `axiovex-agni-recovery` route. It also
+creates an administrator-only Open Terminal connection named
+`NoeRelay Workspace`. Both APIs are private to the Compose network.
+The recovery alias defaults to the local `qwen3.8:27b` model and can be changed
+with `NOERELAY_RECOVERY_LOCAL_MODEL` without exposing its provider ID to clients.
+This direct inference path does not claim NoeRelay governance receipts; the
+separation is intentional for bootstrap-independent maintenance.
 
-## Connect an existing Open WebUI installation
+The same independent recovery route is available outside Sentinel at
+`http://127.0.0.1:${NOERELAY_RECOVERY_PORT:-4002}/v1`. It accepts the model ID
+`axiovex-agni-recovery` and the bearer token stored as `LITELLM_MASTER_KEY` in
+the host-only `.env.docker` file. It remains usable if the NoeRelay gateway is
+stopped.
 
-Start NoeRelay and set an API key when it is reachable beyond loopback. In Open WebUI:
+Normal local inference prefers NVIDIA Personal AI Router (PAIR) as the outer
+GPU-node router. Install PAIR on the Docker host, make
+`NOERELAY_PAIR_MODEL` available in PAIR, and set its OpenAI-compatible URL in
+`NOERELAY_PAIR_BASE_URL`. Docker reaches it through `host.docker.internal` on
+Windows and Linux. If PAIR is unavailable, the model plane falls back to its
+container-local model and then the configured external provider. Recovery
+intentionally bypasses PAIR as well as NoeRelay, preserving an independent
+repair path.
 
-1. Open **Admin Panel → Settings → Connections** (the label may differ by Open WebUI version).
-2. Add an OpenAI-compatible connection.
-3. Set the base URL to the address Open WebUI can reach, ending in `/v1`.
-4. Set the API key to a value accepted by `NOERELAY_AUTH_API_KEYS` or a database-managed NoeRelay key.
-5. Save or test the connection, then select `noerelay/epr-1`.
+The managed profile enables browser-sandboxed code execution, Open Terminal,
+DuckDuckGo web search with confirmation, hybrid document retrieval, Docling
+OCR for images and scanned PDFs, page-aware PDF loading/render extraction,
+audio/video media extraction and YouTube transcripts, message ratings, and administrator
+analytics. Image generation/editing and evaluation-arena pseudo-models are
+disabled because no generation backend is bundled. Evaluation-arena pseudo-models
+remain disabled so the selector contains only the two intentional AXIOVEX entries.
+Image understanding/OCR remains enabled.
 
-Use `http://host.docker.internal:8080/v1` when Open WebUI runs in Docker Desktop and NoeRelay runs directly on the Windows or macOS host. On Linux, use an explicit host-gateway mapping or a shared Docker network. `127.0.0.1` inside the Open WebUI container refers to that container, not the host.
+NoeRelay normalizes provider-specific JSON tool envelopes into native OpenAI
+tool calls for both buffered streaming and non-streaming responses. Self-description
+and architecture questions are answered from NoeRelay's injected product manifest
+without resource-discovery tools, while explicit requests such as listing knowledge
+bases retain native tool execution. A gateway circuit breaker disables tools after
+two identical calls (or eight calls in one user turn), and Open WebUI's independent
+continuation ceiling defaults to 12 through
+`CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS`. This prevents a weak provider from
+repeating one tool until Open WebUI's upstream 256-iteration default is exhausted.
 
-## Verify completion and EPR metadata
+Set `NOERELAY_WORKSPACE_PATH` in `.env.docker` to an absolute host directory.
+Linux paths and Docker Desktop paths such as `C:/Users/name/Development` are
+supported. Open Terminal sees it at `/workspace` and edits are reflected on the
+host. Additional explicit bind mounts can be added using
+`docker-compose.workspaces.example.yml`.
 
-Open WebUI renders the assistant content but may not surface arbitrary top-level response extensions. Verify the full NoeRelay response directly:
+Open Terminal intentionally runs Linux inside its container on every host. On
+Windows it edits mounted Windows files, but it does not run arbitrary native
+Windows processes. Deployment `.env` files are overlaid with redacted files in
+the terminal container so agent loops cannot read control-plane secrets.
 
-```bash
-curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer $NOERELAY_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"noerelay/epr-1","messages":[{"role":"user","content":"What is 2+2?"}]}'
-```
+Open WebUI connection and integration keys are managed server-side in **Admin
+Settings**. Non-secret agent settings can be managed under `/settings`. Core
+container environment and signing/provider secrets remain in the host secret
+file or an external secret manager and require a service recreation to apply.
 
-The returned `epr.run_id` can be used with the authenticated run endpoint:
+Local password authentication is the safe development default. OAuth/OIDC and
+LDAP configuration are present in Admin Settings but disabled until a real
+identity provider is configured. Set `NOERELAY_WEBUI_ENABLE_OAUTH=true` or
+`NOERELAY_WEBUI_ENABLE_LDAP=true` only with the corresponding provider details.
+These controls support a CMMC-oriented deployment, but configuration alone is
+not CMMC certification; production also needs TLS, centralized identity,
+retention/backups, network policy, monitoring, and an assessed system boundary.
 
-```bash
-curl -H "Authorization: Bearer $NOERELAY_API_KEY" \
-  http://localhost:8080/v1/noerelay/runs/RUN_ID/receipt
-```
+Approved AXIOVEX assets are served read-only from `deploy/docker/brand` and the
+interface uses a subordinate identity banner plus a dark, wide workspace
+default. Open WebUI attribution is retained. Deployments above Open WebUI's
+small-scale exception need an appropriate Open WebUI license before deeper
+white-label branding.
 
-Streaming uses server-sent events and ends with `data: [DONE]`. The terminal metadata chunk contains the EPR extension.
-
-## Live OpenRouter mode
-
-Add these values to the ignored local `.env` file or inject them through your secret manager:
-
-```dotenv
-NOERELAY_OPENROUTER_MODE=live
-OPENROUTER_API_KEY=replace-with-your-openrouter-key
-```
-
-Then recreate the gateway. No `OPENAI_API_KEY` is accepted or required by NoeRelay; the similarly named Open WebUI connection variable is only how Open WebUI labels custom compatible backends.
-
-## Local Ollama models
-
-The base Compose file starts Ollama, but it does not download model weights automatically:
-
-```bash
-docker compose exec ollama ollama pull qwen3:8b
-```
-
-Only routes admitted by the configured portfolio and policy are eligible. Downloading a model does not by itself promote it into every governed cohort.
-
-## Architecture
-
-```text
-Browser
-  │
-  ▼
-Open WebUI :3000
-  │  compatible HTTP + API key
-  ▼
-NoeRelay :8080
-  ├── contract → policy → route → execute → verify
-  ├── evidence receipt + hash-linked ledger
-  ├──► local Ollama (optional)
-  └──► OpenRouter → explicit non-OpenAI model IDs (optional live mode)
-```
-
-## Troubleshooting
-
-**Open WebUI reports 401.** Ensure `NOERELAY_API_KEY` has the same value in both Compose services, then recreate them. The health endpoint is intentionally public, so a healthy response does not prove the model route is authenticated.
-
-**The model list is empty.** Run the authenticated `/v1/models` curl command above. Check `docker compose logs noerelay` for startup configuration errors.
-
-**Connection refused.** From one Compose project, use `http://noerelay:8080/v1`, not `localhost`. Confirm both services with `docker compose ps`.
-
-**Browser origin is rejected.** Add the exact scheme, host, and port to `NOERELAY_CORS_ALLOWED_ORIGINS`; wildcard origins are deliberately rejected.
-
-**No real provider answer appears.** Stub mode is deterministic and makes no provider call. Configure live mode and a valid OpenRouter key, or install an eligible Ollama route.
-
-**The dashboard URL returns 401.** Operational routes are protected when authentication is enabled. Use authenticated API calls or place an identity-aware reverse proxy in front of operator surfaces; do not expose them publicly.
-
-For deployment controls, backups, TLS, and monitoring, see [production deployment](production-deployment.md). For other clients, see the [integration guide](integration-guide.md).
+For architecture, remote GPU behavior, verification, and production controls,
+see [Linux GPU deployment](LINUX_GPU_DEPLOYMENT.md).

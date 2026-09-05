@@ -518,7 +518,7 @@ mod tests {
             rationale: String::new(),
         };
         assert_eq!(
-            EvaluatorResult::derive_outcome(&[info.clone()]),
+            EvaluatorResult::derive_outcome(std::slice::from_ref(&info)),
             EvaluatorOutcome::Pass
         );
 

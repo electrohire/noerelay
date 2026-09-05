@@ -2,7 +2,7 @@
 
 Probes every service in the NoeRelay deployment topology:
 - Local: noerelay-gateway (8080), postgres (5432), LiteLLM proxy (4000), Ollama (11434)
-- Remote: layer1labs vLLM (192.168.50.41:4000 via SSH tunnel), Tailscale endpoint
+- Remote GPU: inference through an SSH tunnel and a private-network endpoint
 - Docker: container health checks
 
 Returns a structured health matrix with per-service status, latency, and diagnostics.
@@ -35,7 +35,7 @@ class ServiceStatus:
     host: str
     port: int
     kind: str  # "gateway", "database", "proxy", "inference", "docker", "remote"
-    machine: str  # "localhost", "layer1labs", "docker"
+    machine: str  # "localhost", "remote-gpu", "docker"
     reachable: bool = False
     latency_ms: float = 0.0
     status_code: int = 0
@@ -130,26 +130,26 @@ SERVICE_DEFINITIONS: list[dict[str, Any]] = [
         "health_path": None,
         "models_path": None,
     },
-    # --- Remote: layer1labs vLLM (via SSH tunnel on localhost:4000) ---
+    # --- Remote GPU inference via SSH tunnel on localhost:4000 ---
     {
-        "name": "Layer1Labs vLLM (SSH tunnel)",
+        "name": "Remote GPU inference endpoint",
         "host": "127.0.0.1",
         "port": 4000,
         "kind": "inference",
-        "machine": "layer1labs",
+        "machine": "remote-gpu",
         "health_path": "/health",
         "models_path": "/v1/models",
         "alt_port": 4000,  # Same port as LiteLLM — distinguished by kind
     },
-    # --- Remote: layer1labs Tailscale direct ---
+    # --- Remote GPU private-network endpoint ---
     {
-        "name": "Layer1Labs Tailscale",
+        "name": "Remote GPU network endpoint",
         "host": os.environ.get(
-            "LAYER1LABS_TAILSCALE_HOST", "layer1labs.tail8508ce.ts.net"
+            "REMOTE_GPU_HOST", "remote-gpu.example.internal"
         ),
         "port": 4000,
         "kind": "inference",
-        "machine": "layer1labs",
+        "machine": "remote-gpu",
         "health_path": "/health",
         "models_path": "/v1/models",
     },
@@ -285,7 +285,7 @@ def probe_all_services(
     Args:
         timeout: Per-probe timeout in seconds.
         include_docker: Whether to check Docker container status.
-        include_remote: Whether to probe remote machines (layer1labs).
+        include_remote: Whether to probe remote machines (remote-gpu).
 
     Returns:
         HealthMatrix with status of every service.
@@ -297,7 +297,7 @@ def probe_all_services(
 
     for svc_def in SERVICE_DEFINITIONS:
         # Skip remote if not requested
-        if not include_remote and svc_def["machine"] == "layer1labs":
+        if not include_remote and svc_def["machine"] == "remote-gpu":
             continue
         # Skip docker if not requested
         if not include_docker and svc_def["kind"] == "docker":
@@ -358,8 +358,8 @@ def probe_all_services(
         if svc.reachable:
             machines_healthy.add(machine)
 
-        # Special: check SSH tunnel for layer1labs
-        if machine == "layer1labs" and host == "127.0.0.1":
+        # Special: check SSH tunnel for remote-gpu
+        if machine == "remote-gpu" and host == "127.0.0.1":
             if _ssh_tunnel_active(host, port):
                 svc.detail = f"SSH tunnel active. {svc.detail}"
 

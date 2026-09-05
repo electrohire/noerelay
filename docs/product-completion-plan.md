@@ -2,7 +2,7 @@
 
 **Status:** Superseded implementation baseline; retained for historical detail
 
-**Target:** A production-ready `noerelay/epr-1` virtual model with a complete basic core and governed extension points
+**Target:** A production-ready `axiovex-agni` virtual model with a complete basic core and governed extension points
 
 **Planning assumption:** Four core engineers, part-time security/product support, approximately 20–22 weeks to general availability
 

@@ -151,8 +151,8 @@
     {
       "action_id": "action-0027",
       "category": "restart_service",
-      "description": "Restart Layer1Labs Tailscale on layer1labs",
-      "target": "Layer1Labs Tailscale",
+      "description": "Restart Remote GPU network endpoint on the remote GPU",
+      "target": "Remote GPU network endpoint",
       "current_state": "unhealthy",
       "proposed_state": "healthy",
       "expected_impact": {

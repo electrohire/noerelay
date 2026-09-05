@@ -43,12 +43,12 @@
     },
     {
       "cycle": 2,
-      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "action": "Restart Remote GPU inference endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:44:01.331109+00:00"
     },
     {
       "cycle": 2,
-      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "action": "Restart Remote GPU network endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:44:01.331109+00:00"
     },
     {
@@ -73,12 +73,12 @@
     },
     {
       "cycle": 3,
-      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "action": "Restart Remote GPU inference endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:48:20.208915+00:00"
     },
     {
       "cycle": 3,
-      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "action": "Restart Remote GPU network endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:48:20.208915+00:00"
     },
     {
@@ -108,12 +108,12 @@
     },
     {
       "cycle": 4,
-      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "action": "Restart Remote GPU inference endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:52:50.796830+00:00"
     },
     {
       "cycle": 4,
-      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "action": "Restart Remote GPU network endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:52:50.796830+00:00"
     },
     {
@@ -148,12 +148,12 @@
     },
     {
       "cycle": 5,
-      "action": "Restart Layer1Labs vLLM (SSH tunnel) on layer1labs",
+      "action": "Restart Remote GPU inference endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:57:27.664720+00:00"
     },
     {
       "cycle": 5,
-      "action": "Restart Layer1Labs Tailscale on layer1labs",
+      "action": "Restart Remote GPU network endpoint on the remote GPU",
       "timestamp": "2026-09-02T21:57:27.664720+00:00"
     }
   ],

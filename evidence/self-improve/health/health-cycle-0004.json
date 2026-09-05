@@ -5,7 +5,7 @@
   "total_count": 8,
   "machines_online": [
     "docker",
-    "layer1labs",
+    "remote-gpu",
     "localhost"
   ],
   "machines_offline": [],
@@ -78,11 +78,11 @@
       "error": ""
     },
     {
-      "name": "Layer1Labs vLLM (SSH tunnel)",
+      "name": "Remote GPU inference endpoint",
       "host": "127.0.0.1",
       "port": 4000,
       "kind": "inference",
-      "machine": "layer1labs",
+      "machine": "remote-gpu",
       "reachable": true,
       "latency_ms": 4.82,
       "status_code": 200,
@@ -94,11 +94,11 @@
       "error": ""
     },
     {
-      "name": "Layer1Labs Tailscale",
-      "host": "layer1labs.tail8508ce.ts.net",
+      "name": "Remote GPU network endpoint",
+      "host": "remote-gpu.example.internal",
       "port": 4000,
       "kind": "inference",
-      "machine": "layer1labs",
+      "machine": "remote-gpu",
       "reachable": true,
       "latency_ms": 48.05,
       "status_code": 400,

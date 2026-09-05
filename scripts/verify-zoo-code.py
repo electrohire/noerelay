@@ -26,7 +26,7 @@ def do_step(name, method, path, **kw):
 # Step 3: zoo-code style request
 do_step("Step 3: zoo-code style request (system+user, temperature, max_tokens)", "POST", "/v1/chat/completions",
     json={
-        "model": "noerelay/epr-1",
+        "model": "axiovex-agni",
         "messages": [
             {"role": "system", "content": "You are a helpful coding assistant."},
             {"role": "user", "content": "Write a Python function that reverses a string."}
@@ -40,7 +40,7 @@ do_step("Step 3: zoo-code style request (system+user, temperature, max_tokens)",
 # Step 4: Simple model test
 do_step("Step 4: Simple model test", "POST", "/v1/chat/completions",
     json={
-        "model": "noerelay/epr-1",
+        "model": "axiovex-agni",
         "messages": [{"role": "user", "content": "What is the capital of France?"}]
     }
 )
@@ -50,7 +50,7 @@ print(f"\n{'='*60}")
 print("STEP 5: Streaming")
 url = f"{BASE}/v1/chat/completions"
 r = requests.post(url, json={
-    "model": "noerelay/epr-1",
+    "model": "axiovex-agni",
     "messages": [{"role": "user", "content": "Count from 1 to 5"}],
     "stream": True
 }, stream=True, timeout=30)
@@ -82,7 +82,7 @@ print("STEP 7: Rate limit test (5 rapid requests)")
 for i in range(1, 6):
     try:
         r = requests.post(f"{BASE}/v1/chat/completions", json={
-            "model": "noerelay/epr-1",
+            "model": "axiovex-agni",
             "messages": [{"role": "user", "content": f"test {i}"}]
         }, timeout=10)
         print(f"  Request {i}: {r.status_code}")
@@ -97,7 +97,7 @@ do_step("Step 8a: Invalid model", "POST", "/v1/chat/completions",
     json={"model": "invalid-model", "messages": [{"role": "user", "content": "test"}]}
 )
 do_step("Step 8b: Empty messages", "POST", "/v1/chat/completions",
-    json={"model": "noerelay/epr-1", "messages": []}
+    json={"model": "axiovex-agni", "messages": []}
 )
 
 print("\nDone with HTTP tests.")

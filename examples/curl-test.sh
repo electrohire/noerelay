@@ -17,7 +17,7 @@
 # Environment variables:
 #   NOERELAY_BASE_URL  — NoeRelay base URL (default: http://127.0.0.1:8080)
 #   NOERELAY_API_KEY   — NoeRelay API key (default: noerelay, Compose dev key)
-#   NOERELAY_MODEL     — Model ID to use (default: noerelay/epr-1)
+#   NOERELAY_MODEL     — Model ID to use (default: axiovex-agni)
 # =============================================================================
 
 set -euo pipefail
@@ -27,7 +27,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 BASE_URL="${NOERELAY_BASE_URL:-http://127.0.0.1:8080}"
 API_KEY="${NOERELAY_API_KEY:-noerelay}"
-MODEL="${NOERELAY_MODEL:-noerelay/epr-1}"
+MODEL="${NOERELAY_MODEL:-axiovex-agni}"
 TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/noerelay-smoke.XXXXXX")
 SCRIPT_BASHPID=$BASHPID
 cleanup() {
@@ -293,7 +293,7 @@ test_error_handling() {
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $API_KEY" \
         -d '{
-            "model": "noerelay/epr-1"
+            "model": "axiovex-agni"
         }' 2>/dev/null || true)
     HTTP_CODE="${HTTP_CODE:-000}"
 

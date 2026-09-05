@@ -95,8 +95,8 @@
     {
       "action_id": "action-0005",
       "category": "restart_service",
-      "description": "Restart Layer1Labs Tailscale on layer1labs",
-      "target": "Layer1Labs Tailscale",
+      "description": "Restart Remote GPU network endpoint on the remote GPU",
+      "target": "Remote GPU network endpoint",
       "current_state": "unhealthy",
       "proposed_state": "healthy",
       "expected_impact": {
@@ -117,5 +117,5 @@
       "efficiency": 10000.0
     }
   ],
-  "summary": "Cycle 1: score=0.9563 (delta=+0.0000), convergence=0%\nBottlenecks: 0 critical, 3 warnings\nRecommended actions: 5\n  - Reduce context budget for coding-tasks to lower latency\n  - Use faster model (qwen38-4b-distilled) for coding-tasks when quality requirements are low\n  - Enable cloud fallback for reason-9 — no local model meets accuracy threshold\n  - Restart PostgreSQL on localhost\n  - Restart Layer1Labs Tailscale on layer1labs"
+  "summary": "Cycle 1: score=0.9563 (delta=+0.0000), convergence=0%\nBottlenecks: 0 critical, 3 warnings\nRecommended actions: 5\n  - Reduce context budget for coding-tasks to lower latency\n  - Use faster model (qwen38-4b-distilled) for coding-tasks when quality requirements are low\n  - Enable cloud fallback for reason-9 — no local model meets accuracy threshold\n  - Restart PostgreSQL on localhost\n  - Restart Remote GPU network endpoint on the remote GPU"
 }

@@ -237,9 +237,9 @@ impl IdentityProvider for OidcIdentityProvider {
 /// IAM middleware that resolves identity from the Authorization header.
 ///
 /// Authentication flow:
-/// 1. If [`ApiKeyRepository`] is available, parse Bearer token as
+/// 1. Accept the configured bootstrap key using a constant-time SHA256 comparison.
+/// 2. Otherwise, if [`ApiKeyRepository`] is available, parse Bearer token as
 ///    `prefix.secret` and verify via Argon2id constant-time comparison.
-/// 2. Fall back to legacy SHA256 comparison against configured key.
 /// 3. Apply rate limiting and concurrency tracking if configured.
 /// 4. Resolve the full identity with memberships and permissions.
 /// 5. Attach [`ResolvedIdentity`] to request extensions.
@@ -256,8 +256,14 @@ pub async fn iam_middleware(
     let method = request.method().as_str().to_owned();
     let path = request.uri().path().to_owned();
 
-    // Try API key repository verification first
-    let auth_result = if let Some(api_key_repo) = &state.api_key_repo {
+    // The configured key is the deployment bootstrap credential. It must keep
+    // working when a durable API-key repository is enabled; otherwise merely
+    // setting DATABASE_URL makes a fresh deployment impossible to administer.
+    let bootstrap_key_authorized = authorized(&headers, &state.bearer_key_sha256);
+
+    let auth_result = if bootstrap_key_authorized {
+        None
+    } else if let Some(api_key_repo) = &state.api_key_repo {
         verify_with_api_key_repo(api_key_repo, &headers, ip.as_deref()).await
     } else {
         None
@@ -404,7 +410,7 @@ pub async fn iam_middleware(
     }
 
     // Legacy: validate against configured bearer key SHA256
-    if !authorized(&headers, &state.bearer_key_sha256) {
+    if !bootstrap_key_authorized {
         return error_response(
             StatusCode::UNAUTHORIZED,
             "invalid_api_key",

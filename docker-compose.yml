@@ -1,74 +1,345 @@
-services:
-  noerelay:
-    build: .
-    ports:
-      - "${NOERELAY_PORT:-8080}:8080"
-    environment:
-      NOERELAY_API_KEY: ${NOERELAY_API_KEY:-noerelay-local-development-key-0001}
-      NOERELAY_OPENROUTER_MODE: ${NOERELAY_OPENROUTER_MODE:-live}
-      NOERELAY_ORGANIZATION_ID: ${NOERELAY_ORGANIZATION_ID:-local-org}
-      NOERELAY_PROJECT_ID: ${NOERELAY_PROJECT_ID:-local-project}
-      NOERELAY_ENVIRONMENT_ID: ${NOERELAY_ENVIRONMENT_ID:-development}
-      NOERELAY_CANDIDATES_JSON: '${NOERELAY_CANDIDATES_JSON:-[{"candidate_id":"deepseek-v4-pro","openrouter_model_id":"deepseek/deepseek-v4-pro","provider":"deepseek","available":true,"capabilities":["text"],"maximum_data_class":"confidential","cost":{"inference_microusd":1,"tools_microusd":0,"verification_microusd":0,"expected_retry_microusd":0,"expected_fallback_microusd":0,"infrastructure_microusd":0,"expected_human_review_microusd":0},"latency_p95_ms":1,"acceptance_lcb_ppm":999999,"supports_independent_verification":true}]}'
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
-      NOERELAY_BUDGET_LIMIT_MICROUSD: ${NOERELAY_BUDGET_LIMIT_MICROUSD:-10000000000}
-      NOERELAY_CONTEXT_BUDGET_TOKENS: ${NOERELAY_CONTEXT_BUDGET_TOKENS:-131072}
-      NOERELAY_RECEIPT_SIGNING_SEED_HEX: ${NOERELAY_RECEIPT_SIGNING_SEED_HEX:-0000000000000000000000000000000000000000000000000000000000000000}
-      NOERELAY_RECEIPT_SIGNING_KEY_ID: ${NOERELAY_RECEIPT_SIGNING_KEY_ID:-local-development-key}
-      # DATABASE_URL: postgresql://noerelay:${NOERELAY_POSTGRES_PASSWORD:-noerelay-local-db-password}@postgres:5432/noerelay
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/ready"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
+name: noerelay
 
+# Linux-first, GPU-enabled NoeRelay deployment.
+services:
   postgres:
-    image: postgres:17-bookworm@sha256:84560e3b9c6874893fc4e2854f5dc3e7c1a37bc9d1dfd7a8c641310ae22ba5ad
+    image: postgres:18-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
     environment:
       POSTGRES_USER: noerelay
-      POSTGRES_PASSWORD: ${NOERELAY_POSTGRES_PASSWORD:-noerelay-local-db-password}
+      POSTGRES_PASSWORD: ${NOERELAY_POSTGRES_PASSWORD:?set NOERELAY_POSTGRES_PASSWORD in .env.docker}
       POSTGRES_DB: noerelay
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+    volumes: [postgres-data-v18:/var/lib/postgresql]
+    networks: [backend]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U noerelay -d noerelay"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:0.33.3@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2
+    gpus: all
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-15m}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-2}
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
+      OLLAMA_SCHED_SPREAD: ${OLLAMA_SCHED_SPREAD:-true}
+    volumes: [ollama-models:/root/.ollama]
+    networks: [model-plane, egress]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:0.33.3@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    command: ["pull", "${NOERELAY_LOCAL_MODEL:-qwen3:8b}"]
+    networks: [model-plane, egress]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  ollama-recovery-init:
+    image: ollama/ollama:0.33.3@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    command: ["pull", "${NOERELAY_RECOVERY_LOCAL_MODEL:-qwen3.8:27b}"]
+    networks: [model-plane, egress]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  remote-gpu-tunnel:
+    build: {context: ./deploy/docker/remote-tunnel}
+    environment:
+      SSH_HOST: ${REMOTE_GPU_SSH_HOST:?set REMOTE_GPU_SSH_HOST in .env.docker}
+      SSH_PORT: ${REMOTE_GPU_SSH_PORT:-22}
+      SSH_USER: ${REMOTE_GPU_SSH_USER:-actor}
+      REMOTE_HOST: ${REMOTE_GPU_VLLM_HOST:-127.0.0.1}
+      REMOTE_PORT: ${REMOTE_GPU_VLLM_PORT:-4000}
+      LOCAL_PORT: 4001
+    volumes:
+      - type: bind
+        source: ${REMOTE_GPU_SSH_KEY_PATH:?set REMOTE_GPU_SSH_KEY_PATH in .env.docker}
+        target: /run/input/id_remote_gpu
+        read_only: true
+      - type: bind
+        source: ${REMOTE_GPU_KNOWN_HOSTS_PATH:?set REMOTE_GPU_KNOWN_HOSTS_PATH in .env.docker}
+        target: /run/input/known_hosts
+        read_only: true
+    tmpfs:
+      - "/run/ssh:rw,noexec,nosuid,size=1m,mode=0700,uid=10001,gid=10001"
+    networks: [model-plane, egress]
+    healthcheck:
+      # The remote is optional; container health means the reconnecting autossh
+      # supervisor is alive. Route health is enforced by LiteLLM failover.
+      test: ["CMD", "pidof", "autossh"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.99.1@sha256:a53a7d3ffebede1925bd3ee8a21e4a7b9b63e2e68ec883af136edcccb6eeb82c
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "2"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env.docker}
+      LITELLM_LOCAL_MODEL: ollama/${NOERELAY_LOCAL_MODEL:-qwen3:8b}
+      LITELLM_REMOTE_MODEL: openai/${REMOTE_GPU_MODEL:-local-model}
+      PAIR_MODEL: openai/${NOERELAY_PAIR_MODEL:-qwen3:8b}
+      PAIR_OPENAI_BASE_URL: ${NOERELAY_PAIR_BASE_URL:-http://host.docker.internal:11434/v1}
+      PAIR_API_KEY: ${NOERELAY_PAIR_API_KEY:-pair-local}
+      REMOTE_GPU_API_KEY: ${REMOTE_GPU_API_KEY:-no-key}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes: [./deploy/docker/litellm-config.yaml:/app/config.yaml:ro]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [backend, model-plane, egress]
+    depends_on:
+      postgres: {condition: service_healthy}
+      ollama: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  recovery-proxy:
+    image: ghcr.io/berriai/litellm:v1.99.1@sha256:a53a7d3ffebede1925bd3ee8a21e4a7b9b63e2e68ec883af136edcccb6eeb82c
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    ports: ["${NOERELAY_RECOVERY_PORT:-4002}:4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env.docker}
+      RECOVERY_LOCAL_MODEL: ollama/${NOERELAY_RECOVERY_LOCAL_MODEL:-qwen3.8:27b}
+    volumes: [./deploy/docker/recovery-litellm-config.yaml:/app/config.yaml:ro]
+    networks: [frontend, model-plane]
+    depends_on:
+      ollama-recovery-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  noerelay:
+    build: .
+    ports: ["${NOERELAY_PORT:-8080}:8080"]
+    environment:
+      NOERELAY_API_KEY: ${NOERELAY_API_KEY:?set NOERELAY_API_KEY in .env.docker}
+      NOERELAY_OPENROUTER_MODE: live
+      NOERELAY_PRODUCTION_MODE: "true"
+      NOERELAY_ORGANIZATION_ID: ${NOERELAY_ORGANIZATION_ID:-local-org}
+      NOERELAY_PROJECT_ID: ${NOERELAY_PROJECT_ID:-local-project}
+      NOERELAY_ENVIRONMENT_ID: ${NOERELAY_ENVIRONMENT_ID:-production}
+      NOERELAY_CANDIDATES_JSON: '${NOERELAY_CANDIDATES_JSON:-[{"candidate_id":"gpu-pool","openrouter_model_id":"gpu-pool","provider":"noerelay-model-plane","available":true,"capabilities":["text","tools"],"maximum_data_class":"confidential","cost":{"inference_microusd":0,"tools_microusd":0,"verification_microusd":0,"expected_retry_microusd":0,"expected_fallback_microusd":0,"infrastructure_microusd":0,"expected_human_review_microusd":0},"latency_p95_ms":2500,"acceptance_lcb_ppm":900000,"supports_independent_verification":true}]}'
+      OPENROUTER_API_KEY: ${LITELLM_MASTER_KEY}
+      OPENROUTER_BASE_URL: http://litellm:4000/v1
+      DATABASE_URL: postgresql://noerelay:${NOERELAY_POSTGRES_PASSWORD}@postgres:5432/noerelay
+      NOERELAY_BUDGET_LIMIT_MICROUSD: ${NOERELAY_BUDGET_LIMIT_MICROUSD:-10000000000}
+      NOERELAY_CONTEXT_BUDGET_TOKENS: ${NOERELAY_CONTEXT_BUDGET_TOKENS:-131072}
+      NOERELAY_PROVIDER_TIMEOUT_SECONDS: ${NOERELAY_PROVIDER_TIMEOUT_SECONDS:-600}
+      NOERELAY_RECEIPT_SIGNING_SEED_HEX: ${NOERELAY_RECEIPT_SIGNING_SEED_HEX:?set NOERELAY_RECEIPT_SIGNING_SEED_HEX in .env.docker}
+      NOERELAY_RECEIPT_SIGNING_KEY_ID: ${NOERELAY_RECEIPT_SIGNING_KEY_ID:-docker-ed25519-v1}
+    networks: [frontend, backend]
+    depends_on:
+      postgres: {condition: service_healthy}
+      litellm: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
     restart: unless-stopped
 
   a2a-adapter:
-    profiles: ["a2a"]
     build: ./services/a2a-adapter
-    ports:
-      - "${NOERELAY_A2A_PORT:-8090}:8090"
+    ports: ["${NOERELAY_A2A_PORT:-8090}:8090"]
     environment:
       NOERELAY_A2A_LISTEN: 0.0.0.0:8090
       NOERELAY_A2A_EXTERNAL_BASE_URL: ${NOERELAY_A2A_EXTERNAL_BASE_URL:-http://127.0.0.1:8090}
       NOERELAY_INTERNAL_URL: http://noerelay:8080
-      NOERELAY_API_KEY: ${NOERELAY_API_KEY:-noerelay-local-development-key-0001}
-      NOERELAY_A2A_BEARER_KEY: ${NOERELAY_A2A_BEARER_KEY:-noerelay-a2a-local-development-key}
+      NOERELAY_API_KEY: ${NOERELAY_API_KEY}
+      NOERELAY_A2A_BEARER_KEY: ${NOERELAY_A2A_BEARER_KEY:?set NOERELAY_A2A_BEARER_KEY in .env.docker}
       NOERELAY_A2A_PRINCIPAL_ID: ${NOERELAY_A2A_PRINCIPAL_ID:-a2a-adapter}
+    networks: [frontend, egress]
     depends_on:
-      noerelay:
-        condition: service_healthy
+      noerelay: {condition: service_healthy}
     restart: unless-stopped
 
-  ollama:
-    profiles: ["local-models"]
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.11.3@sha256:751b617714b91e4cfd0186a509c72480c858e012976103b09a30dad053c36175
+    ports: ["${NOERELAY_WEBUI_PORT:-3000}:8080"]
     volumes:
-      - ollama-models:/root/.ollama
+      - open-webui-data:/app/backend/data
+      - ./deploy/docker/brand:/app/build/static/axiovex:ro
+    environment:
+      OPENAI_API_BASE_URL: http://noerelay:8080/v1
+      OPENAI_API_BASE_URLS: http://noerelay:8080/v1
+      OPENAI_API_KEY: ${NOERELAY_API_KEY}
+      OPENAI_API_KEYS: ${NOERELAY_API_KEY}
+      ENABLE_OPENAI_API: "true"
+      ENABLE_DIRECT_CONNECTIONS: "false"
+      WEBUI_NAME: AXIOVEX Sentinel
+      WEBUI_URL: http://localhost:${NOERELAY_WEBUI_PORT:-3000}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY in .env.docker}
+      WEBUI_ADMIN_EMAIL: ${WEBUI_ADMIN_EMAIL:-admin@noerelay.local}
+      WEBUI_ADMIN_NAME: ${WEBUI_ADMIN_NAME:-NoeRelay Admin}
+      WEBUI_ADMIN_PASSWORD: ${WEBUI_ADMIN_PASSWORD:?set WEBUI_ADMIN_PASSWORD in .env.docker}
+      ENABLE_SIGNUP: ${NOERELAY_WEBUI_ENABLE_SIGNUP:-false}
+      DEFAULT_USER_ROLE: ${NOERELAY_WEBUI_DEFAULT_USER_ROLE:-pending}
+      ENABLE_PASSWORD_VALIDATION: "true"
+      PASSWORD_VALIDATION_REGEX_PATTERN: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$'
+      PASSWORD_VALIDATION_HINT: At least 12 characters with upper/lowercase, number, and symbol.
+      DEFAULT_MODELS: axiovex-agni
+      DEFAULT_PINNED_MODELS: axiovex-agni,axiovex-agni-recovery
+      ENABLE_OLLAMA_API: "false"
+      ENABLE_WEB_SEARCH: "true"
+      WEB_SEARCH_ENGINE: duckduckgo
+      WEB_SEARCH_RESULT_COUNT: "5"
+      WEB_LOADER_CONCURRENT_REQUESTS: "10"
+      WEB_LOADER_TIMEOUT: "15"
+      ENABLE_WEB_LOADER_SSL_VERIFICATION: "true"
+      YOUTUBE_LOADER_LANGUAGE: '["en"]'
+      ENABLE_CODE_EXECUTION: "true"
+      CODE_EXECUTION_ENGINE: pyodide
+      ENABLE_CODE_INTERPRETER: "true"
+      CODE_INTERPRETER_ENGINE: pyodide
+      CONTENT_EXTRACTION_ENGINE: docling
+      DOCLING_SERVER_URL: http://docling:5001
+      DOCLING_PARAMS: '{"do_ocr":true,"force_ocr":false,"ocr_engine":"tesseract","ocr_lang":["eng"],"pdf_backend":"dlparse_v4","table_mode":"accurate","pipeline":"standard"}'
+      CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES: image/*,audio/*,video/*
+      PDF_EXTRACT_IMAGES: "true"
+      PDF_LOADER_MODE: page
+      ENABLE_RAG_HYBRID_SEARCH: "true"
+      ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: "true"
+      ENABLE_CONTEXT_COMPACTION: "true"
+      # Bound WebUI's own continuation loop as defense in depth. NoeRelay also
+      # stops repeated identical tool calls at the gateway after two attempts.
+      CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS: ${CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS:-12}
+      ENABLE_IMAGE_GENERATION: "false"
+      ENABLE_IMAGE_EDIT: "false"
+      ENABLE_EVALUATION_ARENA_MODELS: "false"
+      ENABLE_MESSAGE_RATING: "true"
+      ENABLE_ADMIN_ANALYTICS: "true"
+      ENABLE_ADMIN_EXPORT: "true"
+      ENABLE_COMMUNITY_SHARING: "false"
+      ENABLE_API_KEYS: "false"
+      ENABLE_OAUTH: ${NOERELAY_WEBUI_ENABLE_OAUTH:-false}
+      ENABLE_OAUTH_PERSISTENT_CONFIG: "true"
+      ENABLE_LDAP: ${NOERELAY_WEBUI_ENABLE_LDAP:-false}
+      DEFAULT_INTERFACE_SETTINGS: '{"widescreenMode":true}'
+      RESPONSE_WATERMARK: '© 2026 AXIOVEX Systems Inc. · AXIOVEX Sentinel · NoeRelay Intelligent AI Control Plane'
+    networks: [frontend, model-plane]
+    depends_on:
+      noerelay: {condition: service_healthy}
+      docling: {condition: service_healthy}
+      ollama: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
     restart: unless-stopped
+
+  open-terminal:
+    image: ghcr.io/open-webui/open-terminal:0.12.3@sha256:8f6d2045aa69e348e39d89bf59e6b267773532335333eed14ff16bbc7c964b73
+    environment:
+      OPEN_TERMINAL_API_KEY: ${OPEN_TERMINAL_API_KEY:?set OPEN_TERMINAL_API_KEY in .env.docker}
+      NOERELAY_RECOVERY_LOCAL_MODEL: ${NOERELAY_RECOVERY_LOCAL_MODEL:-qwen3.8:27b}
+      OPEN_TERMINAL_FILE_BROWSER_ROOT: /workspace
+      OPEN_TERMINAL_INFO: NoeRelay agent workspace (Linux container over a Windows or Linux bind mount)
+      OPEN_TERMINAL_MAX_SESSIONS: ${OPEN_TERMINAL_MAX_SESSIONS:-8}
+      OPEN_TERMINAL_EXECUTE_TIMEOUT: ${OPEN_TERMINAL_EXECUTE_TIMEOUT:-120}
+    volumes:
+      - open-terminal-home:/home/user
+      - type: bind
+        source: ${NOERELAY_WORKSPACE_PATH:?set NOERELAY_WORKSPACE_PATH in .env.docker}
+        target: /workspace
+      - type: bind
+        source: ${NOERELAY_SETTINGS_PATH:?set NOERELAY_SETTINGS_PATH in .env.docker}
+        target: /settings
+      # The workspace may be this repository; mask its deployment credential
+      # files so terminal-enabled models cannot read control-plane secrets.
+      - type: bind
+        source: ./deploy/docker/redacted.env
+        target: /workspace/.env
+        read_only: true
+      - type: bind
+        source: ./deploy/docker/redacted.env
+        target: /workspace/.env.docker
+        read_only: true
+    working_dir: /workspace
+    networks: [frontend, egress]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  docling:
+    image: ghcr.io/docling-project/docling-serve-cpu:v1.29.0@sha256:51c18e0e0fec8a13ab858f03d5e9a140178d8d95962400553cb2644ad5ee84da
+    environment:
+      DOCLING_SERVE_ENABLE_UI: "false"
+      DOCLING_SERVE_ENABLE_REMOTE_SERVICES: "false"
+      DOCLING_SERVE_MAX_SYNC_WAIT: "300"
+      DOCLING_SERVE_ENG_LOC_NUM_WORKERS: "1"
+      UVICORN_WORKERS: "1"
+      OMP_NUM_THREADS: ${DOCLING_CPU_THREADS:-4}
+      MKL_NUM_THREADS: ${DOCLING_CPU_THREADS:-4}
+    volumes: [docling-artifacts:/app/data]
+    networks: [frontend, model-plane]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:5001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+    restart: unless-stopped
+
+  open-webui-init:
+    image: ghcr.io/open-webui/open-webui:v0.11.3@sha256:751b617714b91e4cfd0186a509c72480c858e012976103b09a30dad053c36175
+    entrypoint: ["python", "/bootstrap/configure-open-webui.py"]
+    environment:
+      OPEN_WEBUI_URL: http://open-webui:8080
+      WEBUI_ADMIN_EMAIL: ${WEBUI_ADMIN_EMAIL:-admin@noerelay.local}
+      WEBUI_ADMIN_PASSWORD: ${WEBUI_ADMIN_PASSWORD:?set WEBUI_ADMIN_PASSWORD in .env.docker}
+      NOERELAY_API_KEY: ${NOERELAY_API_KEY:?set NOERELAY_API_KEY in .env.docker}
+      RECOVERY_PROXY_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env.docker}
+      OPEN_TERMINAL_API_KEY: ${OPEN_TERMINAL_API_KEY:?set OPEN_TERMINAL_API_KEY in .env.docker}
+    volumes:
+      - ./deploy/docker/configure-open-webui.py:/bootstrap/configure-open-webui.py:ro
+    networks: [frontend]
+    depends_on:
+      open-webui: {condition: service_healthy}
+      open-terminal: {condition: service_healthy}
+      recovery-proxy: {condition: service_healthy}
+    restart: "no"
+
+networks:
+  frontend:
+  backend: {internal: true}
+  model-plane: {internal: true}
+  egress:
 
 volumes:
-  postgres-data:
+  postgres-data-v18:
   ollama-models:
+  open-webui-data:
+  open-terminal-home:
+  docling-artifacts:

@@ -156,4 +156,4 @@ safety-tasks  → llama3.2:3b        (100%, 136ms, 1.9GB)
 
 5. **Budget cloud models dominate** — premium frontier models (GPT-5.5, Claude Opus 4.1) are unnecessary for these task types. The $0.06/M tok llama-3.2-3b matches their accuracy.
 
-6. **Layer1labs machine is unreachable** — SSH tunnel or Tailscale connection needed for remote vLLM inference.
+6. **remote GPU is unreachable** — SSH tunnel or Tailscale connection needed for remote vLLM inference.
