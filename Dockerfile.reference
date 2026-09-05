@@ -1,12 +1,12 @@
 # Legacy Python conformance-oracle image. The production image is built from Dockerfile.
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 COPY reference/ ./reference/
 COPY spec/ ./spec/
 COPY examples/ ./examples/
 
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 RUN groupadd -r noerelay && useradd -r -g noerelay -d /app -s /sbin/nologin noerelay
 WORKDIR /app
 ENV PYTHONPATH=/app/reference \
